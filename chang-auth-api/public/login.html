@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>เข้าสู่ระบบ</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="card">
+    <h1>เข้าสู่ระบบ</h1>
+    <p class="subtitle">กรอกอีเมลและรหัสผ่านของคุณ</p>
+
+    <div id="alert" class="alert" role="alert" hidden></div>
+
+    <form id="loginForm" novalidate>
+      <label for="email">อีเมล</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+
+      <label for="password">รหัสผ่าน</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <button id="submitBtn" type="submit">เข้าสู่ระบบ</button>
+    </form>
+
+    <p class="switch">ยังไม่มีบัญชี? <a id="registerLink" href="/register">สมัครสมาชิก</a></p>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/login.js"></script>
+</body>
+</html>
