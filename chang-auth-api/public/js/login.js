@@ -18,6 +18,12 @@ if (params.get('exists') === '1') {
 if (params.get('expired') === '1') {
   showAlert(alertBox, 'info', 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง');
 }
+if (params.get('reset') === '1') {
+  showAlert(alertBox, 'success', 'ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสใหม่');
+}
+if (params.get('loggedOut') === '1') {
+  showAlert(alertBox, 'success', 'ออกจากระบบแล้ว (ทุกอุปกรณ์)');
+}
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -54,6 +60,12 @@ form.addEventListener('submit', async (e) => {
   showAlert(alertBox, 'error', thai(data.message));
   submitBtn.disabled = false;
   submitBtn.textContent = 'เข้าสู่ระบบ';
+});
+
+// Keep whatever email was typed when going to forgot-password
+document.getElementById('forgotLink').addEventListener('click', (e) => {
+  const email = emailInput.value.trim();
+  if (email) e.currentTarget.href = `/forgot-password?email=${encodeURIComponent(email)}`;
 });
 
 // Keep whatever email was typed when switching to register

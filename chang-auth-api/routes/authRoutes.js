@@ -1,21 +1,25 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
-const { register, login, me } = require('../controllers/authController');
+const auth = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
+const {
+  ipLimiter,
+  loginEmailLimiter,
+  forgotPasswordEmailLimiter,
+  resendVerificationLimiter,
+} = require('../middleware/rateLimiters');
 
 const router = express.Router();
 
-// Slows down password guessing and probing which emails have accounts.
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 20, // per IP per window
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { message: 'Too many attempts. Please try again in 15 minutes.' },
-});
+router.post('/register', ipLimiter, auth.register);
+router.post('/login', ipLimiter, loginEmailLimiter, auth.login);
+router.get('/me', authMiddleware, auth.me);
+router.post('/logout', authMiddleware, auth.logout);
+router.post('/change-password', ipLimiter, authMiddleware, auth.changePassword);
 
-router.post('/register', authLimiter, register);
-router.post('/login', authLimiter, login);
-router.get('/me', authMiddleware, me);
+router.post('/forgot-password', ipLimiter, forgotPasswordEmailLimiter, auth.forgotPassword);
+router.post('/reset-password', ipLimiter, auth.resetPassword);
+
+router.post('/verify-email', ipLimiter, auth.verifyEmail);
+router.post('/resend-verification', authMiddleware, resendVerificationLimiter, auth.resendVerification);
 
 module.exports = router;

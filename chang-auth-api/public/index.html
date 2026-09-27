@@ -11,13 +11,36 @@
     <h1 id="greeting">กำลังโหลด...</h1>
     <p class="subtitle">คุณเข้าสู่ระบบแล้ว</p>
 
+    <div id="verifyBanner" class="alert info" hidden>
+      ยังไม่ได้ยืนยันอีเมล กรุณากดลิงก์ในอีเมลที่เราส่งไป
+      <button id="resendBtn" class="link" type="button">ส่งอีเมลยืนยันอีกครั้ง</button>
+    </div>
+    <div id="alert" class="alert" role="alert" hidden></div>
+
     <dl>
       <dt>อีเมล</dt><dd id="email">-</dd>
       <dt>ชื่อ</dt><dd id="fullName">-</dd>
       <dt>บทบาท</dt><dd id="role">-</dd>
+      <dt>ยืนยันอีเมล</dt><dd id="verified">-</dd>
     </dl>
 
-    <button id="logoutBtn" class="secondary" type="button">ออกจากระบบ</button>
+    <p id="adminLink" class="switch" hidden><a href="/admin">จัดการผู้ใช้ (admin)</a></p>
+
+    <details class="section">
+      <summary>เปลี่ยนรหัสผ่าน</summary>
+      <form id="changePasswordForm" novalidate>
+        <label for="currentPassword">รหัสผ่านปัจจุบัน</label>
+        <input id="currentPassword" type="password" autocomplete="current-password" required>
+
+        <label for="newPassword">รหัสผ่านใหม่</label>
+        <input id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+        <p class="hint">อุปกรณ์อื่นที่เข้าสู่ระบบอยู่จะถูกออกจากระบบ</p>
+
+        <button id="changePasswordBtn" type="submit">บันทึกรหัสผ่านใหม่</button>
+      </form>
+    </details>
+
+    <button id="logoutBtn" class="secondary" type="button">ออกจากระบบ (ทุกอุปกรณ์)</button>
   </main>
 
   <script src="/js/auth.js"></script>

@@ -1,12 +1,43 @@
+// The Express app, without app.listen(), so tests can load it directly.
+// server.js starts it.
 require('dotenv').config();
+const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const pinoHttp = require('pino-http');
+const logger = require('./config/logger');
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const isProd = process.env.NODE_ENV === 'production';
 const app = express();
+
+// ---------------------------------------------------------------------------
+// 0) Request log
+// One JSON line per request (method, url, status, time taken, request id).
+// req.log inside controllers adds the same reqId to every line, so all logs of
+// one request can be found together. Send X-Request-Id to use your own id.
+// ---------------------------------------------------------------------------
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req, res) => {
+      const incoming = req.headers['x-request-id'];
+      const id = typeof incoming === 'string' && /^[\w-]{1,64}$/.test(incoming) ? incoming : crypto.randomUUID();
+      res.setHeader('X-Request-Id', id);
+      return id;
+    },
+    customLogLevel: (req, res, err) => (err || res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info'),
+    autoLogging: { ignore: (req) => !req.url.startsWith('/api') }, // skip css/js/html files
+    serializers: {
+      // req.raw.ip respects "trust proxy", so it is the real client IP behind Nginx/Caddy
+      req: (req) => ({ id: req.id, method: req.method, url: req.url, ip: req.raw.ip }),
+      res: (res) => ({ statusCode: res.statusCode }),
+    },
+  })
+);
 
 // ---------------------------------------------------------------------------
 // 1) Trust proxy
@@ -69,6 +100,7 @@ app.use(
 app.use(express.json({ limit: '10kb' }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'chang-auth-api-mysql' });
@@ -90,16 +122,10 @@ app.use((err, req, res, next) => {
   if (err.type === 'entity.too.large') {
     return res.status(413).json({ message: 'Request body too large.' });
   }
-  console.error('Unhandled error:', err);
+  req.log.error({ err }, 'unhandled error');
   return res.status(500).json({ message: 'Something went wrong.' });
 });
 
-// In production listen on localhost only, so the app can be reached only
-// through the proxy (keeps HTTPS and TRUST_PROXY honest).
-const HOST = process.env.HOST || (isProd ? '127.0.0.1' : '0.0.0.0');
-const PORT = Number(process.env.PORT) || 4000;
-app.listen(PORT, HOST, () => {
-  console.log(
-    `Auth API (MySQL) on http://${HOST}:${PORT}  env=${isProd ? 'production' : 'development'}  trust proxy=${trustProxy}`
-  );
-});
+app.locals.trustProxy = trustProxy;
+
+module.exports = app;

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>จัดการผู้ใช้</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="card wide">
+    <h1>จัดการผู้ใช้</h1>
+    <p class="subtitle">เปลี่ยนบทบาทของผู้ใช้ มีผลทันทีในคำขอถัดไปของผู้ใช้คนนั้น</p>
+
+    <div id="alert" class="alert" role="alert" hidden></div>
+
+    <form id="searchForm" class="row" role="search">
+      <input id="q" type="search" placeholder="ค้นหาอีเมลหรือชื่อ" aria-label="ค้นหาอีเมลหรือชื่อ">
+      <button type="submit">ค้นหา</button>
+    </form>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>อีเมล</th><th>ชื่อ</th><th>ยืนยันอีเมล</th><th>บทบาท</th></tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="5">กำลังโหลด...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="row pager">
+      <button id="prevBtn" class="secondary" type="button">ก่อนหน้า</button>
+      <span id="pageInfo"></span>
+      <button id="nextBtn" class="secondary" type="button">ถัดไป</button>
+    </div>
+
+    <p class="switch"><a href="/">กลับหน้าหลัก</a></p>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
