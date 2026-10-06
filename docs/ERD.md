@@ -16,9 +16,12 @@ erDiagram
         string   name "ชื่ออังกฤษ"
         string   name_th "ชื่อไทย"
         text     description_th
+        text     description_en "คำอธิบายภาษาอังกฤษ (เว้นว่างได้)"
         text     highlights "จุดเด่น บรรทัดละ 1 ข้อ"
+        text     highlights_en "จุดเด่นภาษาอังกฤษ (เว้นว่างได้)"
         string   category "elephant/adventure/workshop"
         string   duration_label "เช่น 1.5 ชั่วโมง"
+        string   duration_label_en "เช่น 1.5 hours (เว้นว่างได้)"
         int      duration_minutes
         decimal  adult_price
         decimal  child_price

@@ -67,8 +67,8 @@
     "booking_max_advance_days": 365,
     "booking_max_guests": 30,
     "cancel_free_hours": 72,
-    "pickup_time_morning": "06:00 - 06:30 น.",
-    "pickup_time_afternoon": "11:30 - 12:00 น.",
+    "pickup_time_morning": "06:00 - 06:30",
+    "pickup_time_afternoon": "11:30 - 12:00",
     "payment_provider": "mock"
   }
 }

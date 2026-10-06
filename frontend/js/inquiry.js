@@ -1,5 +1,5 @@
-import { api, currentUser } from './api.js';
-import { escapeHtml, loadSettings } from './common.js';
+import { api } from './api.js';
+import { loadSettings, renderAuthNav } from './common.js';
 
 /* ============================================================
    หน้าแรก — ฟอร์ม Send us Your Question → POST /api/inquiries
@@ -61,20 +61,7 @@ async function applySettings() {
   }
 }
 
-/* ลิงก์บัญชีบน navbar ของหน้าแรก — หน้านี้เป็นภาษาอังกฤษทั้งหน้า จึงไม่ใช้ renderAuthNav() ของ common.js
-   ที่เป็นข้อความไทยสำหรับหน้าย่อย ขนาดตัวอักษรและระยะห่างรับมาจาก container ให้เท่ากับเมนูหลัก */
-function renderHomeAuthNav() {
-  const user = currentUser.get();
-  const linkClass = 'hover:text-forest transition whitespace-nowrap';
-  const html = user
-    ? `<a href="account.html" class="${linkClass}">${escapeHtml(user.first_name)}</a>`
-    : `<a href="booking.html" class="${linkClass}">My Booking</a>
-       <a href="login.html" class="${linkClass}">Log in</a>`;
-
-  for (const slot of document.querySelectorAll('[data-auth-nav]')) slot.innerHTML = html;
-}
-
 // module script ถูก defer อยู่แล้ว ตอนรันถึงตรงนี้ DOM พร้อมใช้งาน
-renderHomeAuthNav();
+renderAuthNav();
 applySettings();
 initInquiryForm();

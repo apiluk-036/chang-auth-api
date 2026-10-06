@@ -192,7 +192,7 @@ async function renderActivityCards() {
   const container = document.getElementById('activity-cards');
   if (!container) return;
 
-  showPlaceholder(container, 'กำลังโหลดกิจกรรม...');
+  showPlaceholder(container, 'Loading activities...');
 
   try {
     const { data: activities, meta } = await api.searchActivities(activityFilters());
@@ -201,15 +201,15 @@ async function renderActivityCards() {
     const categorySelect = document.getElementById('filter-category');
     if (categorySelect && categorySelect.options.length <= 1) {
       for (const category of meta.categories) {
-        categorySelect.add(new Option(categoryLabel(category), category));
+        categorySelect.add(new Option(categoryLabel(category, 'en'), category));
       }
     }
 
     const countLabel = document.getElementById('filter-count');
-    if (countLabel) countLabel.textContent = `พบ ${activities.length} กิจกรรม`;
+    if (countLabel) countLabel.textContent = `${activities.length} ${activities.length === 1 ? 'activity' : 'activities'} found`;
 
     if (activities.length === 0) {
-      showPlaceholder(container, 'ไม่พบกิจกรรมที่ตรงกับเงื่อนไข ลองเปลี่ยนคำค้นหรือหมวดหมู่');
+      showPlaceholder(container, 'No activities match your search. Try a different keyword or category.');
       return;
     }
 
@@ -219,18 +219,18 @@ async function renderActivityCards() {
       <div id="${escapeHtml(activity.slug)}" class="bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col scroll-mt-28">
         <a href="activity.html?slug=${escapeHtml(activity.slug)}" class="relative h-64 block">
           ${activityMedia(activity, 'h-64 w-full absolute inset-0')}
-          <span class="absolute top-4 right-4 bg-white rounded-full px-3 py-1.5 font-bold text-forest text-xs">${escapeHtml(categoryLabel(activity.category))}</span>
-          <span class="absolute top-4 left-4 bg-forest text-white text-xs font-bold px-3.5 py-1.5 rounded-full">${escapeHtml(activity.duration_label)}</span>
+          <span class="absolute top-4 right-4 bg-white rounded-full px-3 py-1.5 font-bold text-forest text-xs">${escapeHtml(categoryLabel(activity.category, 'en'))}</span>
+          <span class="absolute top-4 left-4 bg-forest text-white text-xs font-bold px-3.5 py-1.5 rounded-full">${escapeHtml(activity.duration_label_en || activity.duration_label)}</span>
           <div class="absolute bottom-0 left-0 right-0 bg-black/45 px-5 py-3">
-            <p class="text-white font-extrabold text-lg">${formatTHB(activity.adult_price)} / คน</p>
+            <p class="text-white font-extrabold text-lg">${formatTHB(activity.adult_price)} / person</p>
           </div>
         </a>
         <div class="p-6 flex flex-col gap-3 flex-1">
           <h3 class="font-extrabold">${escapeHtml(activity.name)}</h3>
-          <p class="text-sm text-gray-500">${escapeHtml(activity.description_th ?? activity.name_th)}</p>
+          <p class="text-sm text-gray-500">${escapeHtml(activity.description_en || activity.description_th || activity.name)}</p>
           <div class="mt-auto grid grid-cols-2 gap-3">
             <a href="activity.html?slug=${escapeHtml(activity.slug)}"
-               class="border border-forest text-forest font-bold py-3 rounded-lg text-center hover:bg-forest hover:text-white transition">รายละเอียด</a>
+               class="border border-forest text-forest font-bold py-3 rounded-lg text-center hover:bg-forest hover:text-white transition">Details</a>
             <button type="button" data-book-slug="${escapeHtml(activity.slug)}"
               class="bg-gold hover:bg-gold/90 text-white font-bold py-3 rounded-lg transition">
               BOOK NOW
@@ -241,7 +241,7 @@ async function renderActivityCards() {
       )
       .join('');
   } catch (error) {
-    showPlaceholder(container, `โหลดกิจกรรมไม่สำเร็จ: ${error.message}`, 'error');
+    showPlaceholder(container, `Could not load activities: ${error.message}`, 'error');
   }
 }
 
@@ -269,7 +269,7 @@ function openBookingFromQuery() {
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) return;
 
   bookingModal.open(slug, query.get('date')).catch((error) => {
-    alert(`เปิดหน้าจองไม่สำเร็จ: ${error.message}`);
+    alert(`Could not open the booking form: ${error.message}`);
   });
 }
 
@@ -292,7 +292,8 @@ const bookingModal = {
     this.lastBooking = null;
 
     document.getElementById('modal-activity-name').textContent = this.activity.name;
-    document.getElementById('modal-activity-subtitle').textContent = this.activity.name_th;
+    document.getElementById('modal-activity-subtitle').textContent =
+      this.activity.duration_label_en || this.activity.duration_label;
     document.getElementById('input-adult-price').textContent = formatTHB(this.activity.adult_price);
     document.getElementById('input-child-price').textContent = formatTHB(this.activity.child_price);
 
@@ -367,21 +368,21 @@ const bookingModal = {
       return;
     }
 
-    label.textContent = 'กำลังตรวจสอบที่ว่าง...';
+    label.textContent = 'Checking availability...';
     label.className = 'text-sm text-gray-500';
 
     try {
       this.availability = await api.getAvailability(this.activity.slug, date);
       if (this.availability.remaining === 0) {
-        label.textContent = `วันนี้เต็มแล้ว (รับได้ ${this.availability.capacity} ที่/วัน) กรุณาเลือกวันอื่น`;
+        label.textContent = `Fully booked on this date (${this.availability.capacity} spots per day). Please choose another day.`;
         label.className = 'text-sm font-semibold text-red-600';
       } else {
-        label.textContent = `เหลือที่ว่าง ${this.availability.remaining} ที่ จากทั้งหมด ${this.availability.capacity} ที่`;
+        label.textContent = `${this.availability.remaining} of ${this.availability.capacity} spots available`;
         label.className = 'text-sm font-semibold text-forest';
       }
     } catch (error) {
       this.availability = null;
-      label.textContent = `ตรวจสอบที่ว่างไม่ได้: ${error.message}`;
+      label.textContent = `Could not check availability: ${error.message}`;
       label.className = 'text-sm text-red-600';
     }
   },
@@ -412,28 +413,28 @@ const bookingModal = {
 
     if (this.currentStep === 1) {
       const date = document.getElementById('input-date').value;
-      if (!date) return 'กรุณาเลือกวันที่เข้าร่วมกิจกรรม';
-      if (adults + children === 0) return 'ต้องมีผู้ใหญ่หรือเด็กอย่างน้อย 1 คน';
-      if (infants > 0 && adults === 0) return 'ทารกต้องมาพร้อมผู้ใหญ่อย่างน้อย 1 คน';
+      if (!date) return 'Please choose an activity date.';
+      if (adults + children === 0) return 'Please add at least 1 adult or child.';
+      if (infants > 0 && adults === 0) return 'Infants must be accompanied by at least 1 adult.';
       const maxGuests = this.settings.booking_max_guests ?? 30;
       if (adults + children + infants > maxGuests) {
-        return `จองได้สูงสุด ${maxGuests} คนต่อหนึ่งรายการ หากมากกว่านี้กรุณาติดต่อเจ้าหน้าที่`;
+        return `You can book up to ${maxGuests} guests per booking. For larger groups, please contact our staff.`;
       }
       if (this.availability && adults + children > this.availability.remaining) {
-        return `วันที่เลือกเหลือที่ว่างเพียง ${this.availability.remaining} ที่`;
+        return `Only ${this.availability.remaining} spots are left on the selected date.`;
       }
     }
 
     if (this.currentStep === 2) {
       const form = document.getElementById('booking-form');
-      if (!form.elements.first_name.value.trim()) return 'กรุณากรอกชื่อจริง';
-      if (!form.elements.last_name.value.trim()) return 'กรุณากรอกนามสกุล';
-      if (!/^[+()\d\s-]{6,}$/.test(form.elements.phone.value.trim())) return 'รูปแบบเบอร์โทรไม่ถูกต้อง';
+      if (!form.elements.first_name.value.trim()) return 'Please enter your first name.';
+      if (!form.elements.last_name.value.trim()) return 'Please enter your last name.';
+      if (!/^[+()\d\s-]{6,}$/.test(form.elements.phone.value.trim())) return 'Please enter a valid phone number.';
       if (!form.elements.contact_id.value.trim()) {
-        return `กรุณากรอก ${contactIdLabel(form.elements.contact_app.value)} เพื่อให้ทีมงานติดต่อกลับได้`;
+        return `Please enter your ${contactIdLabel(form.elements.contact_app.value, 'en')} so our team can reach you.`;
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.elements.email.value.trim()))
-        return 'รูปแบบอีเมลไม่ถูกต้อง';
+        return 'Please enter a valid email address.';
     }
 
     return null;
@@ -498,16 +499,16 @@ const bookingModal = {
     const pickup = form.querySelector('input[name="pickup"]:checked');
 
     document.getElementById('summary-visitors').textContent =
-      `${adults} ผู้ใหญ่, ${children} เด็ก, ${infants} ทารก`;
+      `Adults ${adults}, Children ${children}, Infants ${infants}`;
     const date = document.getElementById('input-date').value;
-    document.getElementById('summary-date').textContent = date ? formatDate(date) : 'ยังไม่ระบุ';
+    document.getElementById('summary-date').textContent = date ? formatDate(date, 'en-GB') : 'Not specified';
     document.getElementById('summary-pickup').textContent =
-      (pickup?.dataset.label ?? 'ยังไม่ระบุ') +
+      (pickup?.dataset.label ?? 'Not specified') +
       (form.elements.pickup_detail.value.trim() ? ` — ${form.elements.pickup_detail.value.trim()}` : '');
     const round = form.querySelector('input[name="pickup_round"]:checked');
     const roundTime = this.settings[`pickup_time_${round?.value ?? 'morning'}`];
     document.getElementById('summary-round').textContent =
-      `${round?.dataset.label ?? 'รอบเช้า'}${roundTime ? ` — เวลารับ ${roundTime}` : ''}`;
+      `${round?.dataset.label ?? 'Morning round'}${roundTime ? ` — pickup ${roundTime}` : ''}`;
     document.getElementById('summary-contact').textContent =
       `${form.elements.first_name.value} ${form.elements.last_name.value} · ${form.elements.phone.value} · ${form.elements.email.value} · ${form.elements.contact_app.value}: ${form.elements.contact_id.value.trim()}`;
 
@@ -520,7 +521,7 @@ const bookingModal = {
     const button = document.getElementById('checkout-button');
 
     if (!form.elements.accept_terms.checked) {
-      this.setError('กรุณายอมรับเงื่อนไขการยกเลิกก่อนยืนยันการจอง');
+      this.setError('Please accept the cancellation terms before confirming your booking.');
       return;
     }
 
@@ -568,7 +569,7 @@ const bookingModal = {
     panel.classList.remove('hidden');
     document.getElementById('success-ref').textContent = booking.booking_ref;
     document.getElementById('success-detail').textContent =
-      `${booking.activity.name} · ${formatDate(booking.booking_date)} · ${booking.adults} ผู้ใหญ่, ${booking.children} เด็ก, ${booking.infants} ทารก`;
+      `${booking.activity.name} · ${formatDate(booking.booking_date, 'en-GB')} · Adults ${booking.adults}, Children ${booking.children}, Infants ${booking.infants}`;
     document.getElementById('success-total').textContent = formatTHB(booking.total_amount);
     document.getElementById('success-email').textContent = booking.email;
 
@@ -611,6 +612,7 @@ function initBookingModal() {
     document.getElementById('input-contact-app'),
     document.getElementById('input-contact-id'),
     document.getElementById('label-contact-id'),
+    'en',
   );
 
   // ปุ่ม BOOK NOW ถูกสร้างหลังโหลดข้อมูล จึงใช้ event delegation
@@ -618,7 +620,7 @@ function initBookingModal() {
     const bookButton = event.target.closest('[data-book-slug]');
     if (bookButton) {
       bookingModal.open(bookButton.dataset.bookSlug).catch((error) => {
-        alert(`เปิดหน้าจองไม่สำเร็จ: ${error.message}`);
+        alert(`Could not open the booking form: ${error.message}`);
       });
       return;
     }

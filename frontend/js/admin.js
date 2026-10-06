@@ -383,6 +383,7 @@ const activityFields = (isEdit) => [
   { name: 'slug', label: 'slug (ใช้ใน URL)', required: true, maxlength: 80, placeholder: 'elephant-bathing', help: 'ตัวพิมพ์เล็ก ตัวเลข และขีดกลางเท่านั้น', readonly: isEdit },
   { name: 'category', label: 'หมวดหมู่', required: true, maxlength: 40, list: 'category-options', help: 'เช่น elephant, adventure, workshop' },
   { name: 'duration_label', label: 'ระยะเวลา (ข้อความที่แสดง)', required: true, maxlength: 60, placeholder: '1.5 ชั่วโมง' },
+  { name: 'duration_label_en', label: 'ระยะเวลา (อังกฤษ)', maxlength: 60, placeholder: '1.5 hours', keepEmpty: true },
   { name: 'duration_minutes', label: 'ระยะเวลา (นาที)', type: 'number', min: 0, max: 1440 },
   { name: 'adult_price', label: 'ราคาผู้ใหญ่ (บาท)', type: 'number', required: true, min: 0, step: '0.01' },
   { name: 'child_price', label: 'ราคาเด็ก (บาท)', type: 'number', required: true, min: 0, step: '0.01' },
@@ -391,7 +392,9 @@ const activityFields = (isEdit) => [
   { name: 'sort_order', label: 'ลำดับการแสดง', type: 'number', required: true, min: 0 },
   { name: 'image_url', label: 'ที่อยู่รูปภาพ', maxlength: 255, placeholder: 'images/activities/bathing.jpg', keepEmpty: true },
   { name: 'description_th', label: 'คำอธิบาย', type: 'textarea', wide: true, keepEmpty: true },
+  { name: 'description_en', label: 'คำอธิบาย (อังกฤษ — แสดงบนหน้าเลือกกิจกรรม)', type: 'textarea', wide: true, keepEmpty: true },
   { name: 'highlights', label: 'จุดเด่น (บรรทัดละ 1 ข้อ)', type: 'textarea', rows: 4, wide: true, keepEmpty: true },
+  { name: 'highlights_en', label: 'จุดเด่น (อังกฤษ — บรรทัดละ 1 ข้อ)', type: 'textarea', rows: 4, wide: true, keepEmpty: true },
   { name: 'is_active', label: 'สถานะ', type: 'checkbox', checkboxLabel: 'เปิดรับจอง (แสดงบนหน้าเว็บ)', wide: true },
 ];
 

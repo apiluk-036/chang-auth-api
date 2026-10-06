@@ -143,6 +143,7 @@ function initAccount() {
     profileForm.elements.contact_app,
     profileForm.elements.contact_id,
     $('profile-contact-id-label'),
+    'en',
   );
 
   function showTab(tab) {
@@ -161,14 +162,14 @@ function initAccount() {
 
   async function loadBookings() {
     const panel = $('panel-bookings');
-    panel.innerHTML = '<p class="text-center text-gray-400 text-sm py-10">กำลังโหลดการจอง...</p>';
+    panel.innerHTML = '<p class="text-center text-gray-400 text-sm py-10">Loading bookings...</p>';
     try {
       const bookings = await api.myBookings();
       panel.innerHTML = bookings.length
-        ? bookings.map((booking) => bookingCard(booking, { paymentProvider })).join('')
+        ? bookings.map((booking) => bookingCard(booking, { paymentProvider, lang: 'en' })).join('')
         : `<div class="bg-white rounded-2xl border border-gray-200 p-10 text-center">
-             <p class="text-gray-500">คุณยังไม่มีการจอง</p>
-             <a href="activities.html" class="inline-block mt-4 bg-gold hover:bg-gold/90 text-white font-bold px-6 py-3 rounded-lg transition">เลือกกิจกรรม</a>
+             <p class="text-gray-500">You have no bookings yet</p>
+             <a href="activities.html" class="inline-block mt-4 bg-gold hover:bg-gold/90 text-white font-bold px-6 py-3 rounded-lg transition">Browse activities</a>
            </div>`;
     } catch (error) {
       panel.innerHTML = '';
@@ -178,7 +179,7 @@ function initAccount() {
 
   async function loadNotifications() {
     const panel = $('panel-notifications');
-    panel.innerHTML = '<p class="text-center text-gray-400 text-sm py-10">กำลังโหลดการแจ้งเตือน...</p>';
+    panel.innerHTML = '<p class="text-center text-gray-400 text-sm py-10">Loading notifications...</p>';
     try {
       const { data } = await api.myNotifications();
       panel.innerHTML = data.length
@@ -188,13 +189,13 @@ function initAccount() {
           <article class="bg-white rounded-xl border ${item.is_read ? 'border-gray-200' : 'border-gold'} p-5">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
               <h3 class="font-bold">${item.is_read ? '' : '<span class="text-gold">● </span>'}${escapeHtml(item.subject)}</h3>
-              <time class="text-xs text-gray-500">${formatDateTime(item.created_at)}</time>
+              <time class="text-xs text-gray-500">${formatDateTime(item.created_at, 'en-GB')}</time>
             </div>
             <p class="text-sm text-gray-600 mt-2 whitespace-pre-line break-words">${escapeHtml(item.body)}</p>
           </article>`,
             )
             .join('')
-        : '<p class="bg-white rounded-2xl border border-gray-200 p-10 text-center text-gray-500">ยังไม่มีการแจ้งเตือน</p>';
+        : '<p class="bg-white rounded-2xl border border-gray-200 p-10 text-center text-gray-500">No notifications yet</p>';
 
       // เปิดแท็บนี้แล้วถือว่าอ่านทั้งหมด
       if (data.some((item) => !item.is_read)) {
@@ -208,7 +209,7 @@ function initAccount() {
   }
 
   function fillProfile(user) {
-    $('account-greeting').textContent = `สวัสดีคุณ ${user.first_name} ${user.last_name}`;
+    $('account-greeting').textContent = `Hello, ${user.first_name} ${user.last_name}`;
     $('profile-email').value = user.email;
     const form = $('profile-form');
     form.elements.first_name.value = user.first_name;
@@ -239,10 +240,10 @@ function initAccount() {
           const checkout = await api.payMyBooking(ref);
           window.location.href = checkout.checkout_url;
         } else if (action === 'cancel') {
-          if (!window.confirm(`ยืนยันยกเลิกการจอง ${ref}?`)) return;
+          if (!window.confirm(`Cancel booking ${ref}?`)) return;
           await api.cancelMyBooking(ref);
           await loadBookings();
-          setMessage(pageMessage, `ยกเลิกการจอง ${ref} เรียบร้อยแล้ว`, true);
+          setMessage(pageMessage, `Booking ${ref} has been cancelled.`, true);
         }
       } catch (error) {
         handleError(error);
@@ -258,7 +259,7 @@ function initAccount() {
     const contactId = form.elements.contact_id.value.trim();
 
     if (!contactId) {
-      setMessage(message, `กรุณากรอก ${contactIdLabel(form.elements.contact_app.value)}`);
+      setMessage(message, `Please enter your ${contactIdLabel(form.elements.contact_app.value, 'en')}`);
       return;
     }
 
@@ -273,7 +274,7 @@ function initAccount() {
         });
         fillProfile(user);
         renderAuthNav();
-        setMessage(message, 'บันทึกข้อมูลเรียบร้อยแล้ว', true);
+        setMessage(message, 'Your details have been saved.', true);
       } catch (error) {
         handleError(error, message);
       }
@@ -286,18 +287,18 @@ function initAccount() {
     const message = $('password-message');
 
     if (form.elements.new_password.value !== form.elements.password_confirm.value) {
-      setMessage(message, 'รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน');
+      setMessage(message, 'The new passwords do not match.');
       return;
     }
 
     await withBusy(form.querySelector('button[type="submit"]'), async () => {
       try {
-        const result = await api.changePassword({
+        await api.changePassword({
           current_password: form.elements.current_password.value,
           new_password: form.elements.new_password.value,
         });
         form.reset();
-        setMessage(message, result.message, true);
+        setMessage(message, 'Your password has been changed.', true);
       } catch (error) {
         handleError(error, message);
       }
@@ -583,16 +584,16 @@ function initActivityDetail() {
   const slug = params.get('slug');
 
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
-    container.innerHTML = '<p class="text-center text-red-600 py-16">ไม่พบกิจกรรมที่ต้องการ</p>';
+    container.innerHTML = '<p class="text-center text-red-600 py-16">Activity not found</p>';
     return;
   }
 
   (async () => {
     try {
       const [activity, settings] = await Promise.all([api.getActivity(slug), loadSettings()]);
-      document.title = `${activity.name_th} | Chokchai Elephant Camp`;
+      document.title = `${activity.name} | Chokchai Elephant Camp`;
 
-      const highlights = (activity.highlights ?? '')
+      const highlights = (activity.highlights_en || activity.highlights || '')
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean);
@@ -608,17 +609,16 @@ function initActivityDetail() {
           </div>
           <div>
             <div class="flex flex-wrap gap-2 mb-3">
-              <span class="bg-forest text-white text-xs font-bold px-3 py-1.5 rounded-full">${escapeHtml(categoryLabel(activity.category))}</span>
-              <span class="bg-white border border-gray-200 text-xs font-bold px-3 py-1.5 rounded-full">⏱ ${escapeHtml(activity.duration_label)}</span>
+              <span class="bg-forest text-white text-xs font-bold px-3 py-1.5 rounded-full">${escapeHtml(categoryLabel(activity.category, 'en'))}</span>
+              <span class="bg-white border border-gray-200 text-xs font-bold px-3 py-1.5 rounded-full">⏱ ${escapeHtml(activity.duration_label_en || activity.duration_label)}</span>
             </div>
             <h1 class="text-3xl lg:text-4xl font-extrabold text-forest">${escapeHtml(activity.name)}</h1>
-            <p class="text-lg text-gray-600 mt-1">${escapeHtml(activity.name_th)}</p>
           </div>
-          <p class="text-gray-700 leading-relaxed">${escapeHtml(activity.description_th ?? '')}</p>
+          <p class="text-gray-700 leading-relaxed">${escapeHtml(activity.description_en || activity.description_th || '')}</p>
           ${
             highlights.length
               ? `<div>
-                  <h2 class="font-extrabold text-lg mb-3">จุดเด่นของกิจกรรม</h2>
+                  <h2 class="font-script text-forest-dark text-3xl mb-3">Highlights</h2>
                   <ul class="grid sm:grid-cols-2 gap-3">
                     ${highlights.map((line) => `<li class="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm flex gap-2"><span class="text-gold font-bold">✓</span><span>${escapeHtml(line)}</span></li>`).join('')}
                   </ul>
@@ -626,31 +626,31 @@ function initActivityDetail() {
               : ''
           }
           <div class="bg-white border border-gray-200 rounded-2xl p-5 text-sm text-gray-600 leading-relaxed">
-            <h2 class="font-extrabold text-base text-dark mb-2">ข้อมูลที่ควรทราบ</h2>
+            <h2 class="font-script text-forest-dark text-2xl mb-2">Good to know</h2>
             <ul class="list-disc pl-5 flex flex-col gap-1">
-              <li>รับได้สูงสุด ${activity.daily_capacity} ที่ต่อวัน (ทารกไม่นับที่นั่ง)</li>
-              <li>ต้องจองล่วงหน้าอย่างน้อย ${settings.booking_min_lead_days ?? 1} วัน</li>
-              <li>ยกเลิกฟรีก่อนวันกิจกรรมอย่างน้อย ${settings.cancel_free_hours ?? 72} ชั่วโมง</li>
-              <li>บริการรับ-ส่งฟรีในรัศมี 5 กม. จากตัวเมืองเชียงใหม่</li>
+              <li>Up to ${activity.daily_capacity} guests per day (infants do not take a seat)</li>
+              <li>Book at least ${settings.booking_min_lead_days ?? 1} day(s) in advance</li>
+              <li>Free cancellation up to ${settings.cancel_free_hours ?? 72} hours before the activity date</li>
+              <li>Free pickup and drop-off within 5 km of Chiang Mai city</li>
             </ul>
           </div>
         </div>
 
         <aside class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-md p-6 flex flex-col gap-5 lg:sticky lg:top-28">
-          <h2 class="font-extrabold text-lg">ราคา</h2>
+          <h2 class="font-script text-forest-dark text-3xl">Price</h2>
           <dl class="text-sm flex flex-col gap-2">
-            <div class="flex justify-between"><dt>ผู้ใหญ่</dt><dd class="font-extrabold">${formatTHB(activity.adult_price)}</dd></div>
-            <div class="flex justify-between"><dt>เด็ก</dt><dd class="font-extrabold">${formatTHB(activity.child_price)}</dd></div>
-            <div class="flex justify-between"><dt>ทารก</dt><dd class="font-extrabold">${Number(activity.infant_price) === 0 ? 'ฟรี' : formatTHB(activity.infant_price)}</dd></div>
+            <div class="flex justify-between"><dt>Adult</dt><dd class="font-extrabold">${formatTHB(activity.adult_price)}</dd></div>
+            <div class="flex justify-between"><dt>Child</dt><dd class="font-extrabold">${formatTHB(activity.child_price)}</dd></div>
+            <div class="flex justify-between"><dt>Infant</dt><dd class="font-extrabold">${Number(activity.infant_price) === 0 ? 'Free' : formatTHB(activity.infant_price)}</dd></div>
           </dl>
           <div>
-            <label for="detail-date" class="text-sm font-semibold block mb-2">เช็กที่ว่างตามวันที่</label>
+            <label for="detail-date" class="text-sm font-semibold block mb-2">Check availability by date</label>
             <input id="detail-date" type="date" min="${localDateString(minDate)}" value="${localDateString(minDate)}"
                    class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-cream" />
             <p id="detail-availability" class="text-sm mt-2" role="status" aria-live="polite"></p>
           </div>
           <a id="detail-book" href="activities.html?book=${encodeURIComponent(activity.slug)}"
-             class="bg-gold hover:bg-gold/90 text-white font-bold text-center py-3.5 rounded-lg transition">จองกิจกรรมนี้</a>
+             class="bg-gold hover:bg-gold/90 text-white font-bold text-center py-3.5 rounded-lg transition">Book this activity</a>
         </aside>
       </div>`;
 
@@ -661,14 +661,14 @@ function initActivityDetail() {
       const check = async () => {
         if (!dateInput.value) return;
         bookLink.href = `activities.html?book=${encodeURIComponent(activity.slug)}&date=${dateInput.value}`;
-        label.textContent = 'กำลังตรวจสอบที่ว่าง...';
+        label.textContent = 'Checking availability...';
         label.className = 'text-sm mt-2 text-gray-500';
         try {
           const availability = await api.getAvailability(activity.slug, dateInput.value);
           label.textContent =
             availability.remaining > 0
-              ? `เหลือที่ว่าง ${availability.remaining} ที่ จากทั้งหมด ${availability.capacity} ที่`
-              : 'วันนี้เต็มแล้ว กรุณาเลือกวันอื่น';
+              ? `${availability.remaining} of ${availability.capacity} spots available`
+              : 'Fully booked on this date. Please choose another day.';
           label.className = `text-sm mt-2 font-semibold ${availability.remaining > 0 ? 'text-forest' : 'text-red-600'}`;
         } catch (error) {
           label.textContent = error.message;
