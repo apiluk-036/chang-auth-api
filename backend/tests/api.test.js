@@ -434,6 +434,33 @@ describe('สมาชิก: สมัคร / เข้าสู่ระบ�
     await request(app).post('/api/account/login').send({ email: memberEmail, password: 'NewPassw0rd' }).expect(200);
   });
 
+  it('เข้าสู่ระบบด้วยเบอร์โทรได้ ไม่ว่าจะพิมพ์รูปแบบไหน และเบอร์ซ้ำกับบัญชีอื่นไม่ได้', async () => {
+    // โปรไฟล์ตั้งเบอร์ไว้เป็น 089-999-2222 จากเทสต์ก่อนหน้า
+    for (const identifier of ['089-999-2222', '0899992222', '+66 89 999 2222']) {
+      const res = await request(app)
+        .post('/api/account/login')
+        .send({ identifier, password: 'NewPassw0rd' })
+        .expect(200);
+      expect(res.body.data.user.email).toBe(memberEmail);
+    }
+
+    await request(app).post('/api/account/login').send({ identifier: '0899992222', password: 'wrong-password1' }).expect(401);
+    await request(app).post('/api/account/login').send({ identifier: '0800000009', password: 'NewPassw0rd' }).expect(401);
+    await request(app).post('/api/account/login').send({ password: 'NewPassw0rd' }).expect(422);
+
+    const duplicate = await request(app)
+      .post('/api/account/register')
+      .send({
+        email: `phone-dup${TEST_DOMAIN}`,
+        password: 'Passw0rd!',
+        first_name: 'เบอร์',
+        last_name: 'ซ้ำ',
+        phone: '+66899992222',
+      })
+      .expect(409);
+    expect(duplicate.body.error.details[0].field).toBe('phone');
+  });
+
   it('การจองตอนล็อกอินอยู่เข้าไปอยู่ในประวัติของบัญชี พร้อมการแจ้งเตือน', async () => {
     const created = await request(app)
       .post('/api/bookings')

@@ -23,6 +23,19 @@ export function toNumber(value) {
   return Number.isNaN(parsed) ? value : parsed;
 }
 
+/**
+ * เบอร์โทรรูปแบบเดียวสำหรับเทียบกัน: เหลือแต่ตัวเลข และแปลงรหัสประเทศไทย (+66 / 0066) เป็น 0 นำหน้า
+ * "081-234 5678", "+66 81 234 5678" และ "0066812345678" ได้ผลเป็น "0812345678" เหมือนกัน
+ * คืน null ถ้าไม่ใช่เบอร์โทร (สั้นกว่า 6 หลัก)
+ */
+export function normalizePhone(value) {
+  if (!value) return null;
+  let digits = String(value).replace(/\D/g, '');
+  if (digits.startsWith('0066')) digits = `0${digits.slice(4)}`;
+  else if (digits.startsWith('66') && digits.length === 11) digits = `0${digits.slice(2)}`;
+  return digits.length >= 6 ? digits.slice(0, 20) : null;
+}
+
 /** แปลงค่า boolean ของ MySQL (0/1) ให้เป็น true/false */
 export function toBoolean(value) {
   return value === true || value === 1 || value === '1';

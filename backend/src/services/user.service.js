@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import config from '../config/index.js';
 import { db, insertReturning } from '../db/knex.js';
 import ApiError from '../utils/ApiError.js';
-import { toBoolean } from '../utils/helpers.js';
+import { normalizePhone, toBoolean } from '../utils/helpers.js';
 
 const PUBLIC_COLUMNS = [
   'id',
@@ -31,11 +31,26 @@ const session = (row) => {
 
 /* ---------- ลูกค้า ---------- */
 
+/** เบอร์โทรใช้ล็อกอินได้ จึงต้องไม่ซ้ำกับบัญชีอื่น (เทียบแบบ normalize แล้ว) */
+async function assertPhoneAvailable(phoneNormalized, exceptUserId = null) {
+  if (!phoneNormalized) return;
+  const query = db('users').where({ phone_normalized: phoneNormalized });
+  if (exceptUserId) query.whereNot({ id: exceptUserId });
+  if (await query.first()) {
+    throw ApiError.conflict('เบอร์โทรนี้ถูกใช้กับบัญชีอื่นแล้ว', [
+      { field: 'phone', message: 'เบอร์โทรนี้ถูกใช้กับบัญชีอื่นแล้ว' },
+    ]);
+  }
+}
+
 export async function register(input) {
   const email = input.email.toLowerCase();
 
   const existing = await db('users').where({ email }).first();
   if (existing) throw ApiError.conflict('อีเมลนี้สมัครสมาชิกไว้แล้ว กรุณาเข้าสู่ระบบ');
+
+  const phoneNormalized = normalizePhone(input.phone);
+  await assertPhoneAvailable(phoneNormalized);
 
   const row = await insertReturning(db, 'users', {
     email,
@@ -43,6 +58,7 @@ export async function register(input) {
     first_name: input.first_name,
     last_name: input.last_name,
     phone: input.phone ?? null,
+    phone_normalized: phoneNormalized,
     contact_app: input.contact_app ?? 'Line',
     contact_id: input.contact_id ?? null,
     last_login_at: db.fn.now(),
@@ -54,9 +70,23 @@ export async function register(input) {
   return session(row);
 }
 
-export async function login({ email, password }) {
-  const row = await db('users').where({ email: email.toLowerCase() }).first();
-  const invalid = () => ApiError.unauthorized('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+/**
+ * หาบัญชีจากสิ่งที่ลูกค้าพิมพ์ในช่องล็อกอิน — มี @ ถือเป็นอีเมล นอกนั้นถือเป็นเบอร์โทร
+ * ถ้าเบอร์เดียวกันผูกกับหลายบัญชี (ข้อมูลเก่าก่อนมีการกันเบอร์ซ้ำ) จะไม่เดาให้ ต้องล็อกอินด้วยอีเมล
+ */
+async function findByIdentifier(identifier) {
+  const value = identifier.trim();
+  if (value.includes('@')) return db('users').where({ email: value.toLowerCase() }).first();
+
+  const phoneNormalized = normalizePhone(value);
+  if (!phoneNormalized) return undefined;
+  const rows = await db('users').where({ phone_normalized: phoneNormalized }).limit(2);
+  return rows.length === 1 ? rows[0] : undefined;
+}
+
+export async function login({ identifier, email, password }) {
+  const row = await findByIdentifier(identifier ?? email);
+  const invalid = () => ApiError.unauthorized('อีเมล/เบอร์โทร หรือรหัสผ่านไม่ถูกต้อง');
 
   if (!row) {
     await bcrypt.compare(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva');
@@ -76,9 +106,12 @@ export async function getUserById(id) {
 }
 
 export async function updateProfile(id, changes) {
-  await db('users')
-    .where({ id })
-    .update({ ...changes, updated_at: db.fn.now() });
+  const update = { ...changes, updated_at: db.fn.now() };
+  if (changes.phone !== undefined) {
+    update.phone_normalized = normalizePhone(changes.phone);
+    await assertPhoneAvailable(update.phone_normalized, id);
+  }
+  await db('users').where({ id }).update(update);
   return getUserById(id);
 }
 

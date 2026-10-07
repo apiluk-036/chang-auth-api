@@ -49,19 +49,27 @@ function initRegister() {
 
   const form = $('register-form');
   const message = $('form-message');
-  bindContactApp(form.elements.contact_app, form.elements.contact_id, $('reg-contact-id-label'));
+  bindContactApp(form.elements.contact_app, form.elements.contact_id, $('reg-contact-id-label'), 'en');
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const field = (name) => form.elements[name].value.trim();
 
-    if (!field('first_name') || !field('last_name')) return setMessage(message, 'กรุณากรอกชื่อและนามสกุล');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('email'))) return setMessage(message, 'รูปแบบอีเมลไม่ถูกต้อง');
-    if (!field('contact_id')) {
-      return setMessage(message, `กรุณากรอก ${contactIdLabel(form.elements.contact_app.value)}`);
+    if (!field('first_name') || !field('last_name')) return setMessage(message, 'Please enter your first and last name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field('email'))) return setMessage(message, 'Please enter a valid email address.');
+    // กติกาเดียวกับ registerSchema ฝั่ง API ตรวจที่นี่ก่อนเพื่อแจ้งเป็นภาษาอังกฤษ (ข้อความ validation จาก API เป็นไทย)
+    if (field('phone') && !/^[+()0-9 -]{6,}$/.test(field('phone'))) {
+      return setMessage(message, 'Please enter a valid phone number.');
     }
-    if (form.elements.password.value !== form.elements.password_confirm.value) {
-      return setMessage(message, 'รหัสผ่านทั้งสองช่องไม่ตรงกัน');
+    if (!field('contact_id')) {
+      return setMessage(message, `Please enter your ${contactIdLabel(form.elements.contact_app.value, 'en')}.`);
+    }
+    const password = form.elements.password.value;
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      return setMessage(message, 'Your password must be at least 8 characters and include both letters and numbers.');
+    }
+    if (password !== form.elements.password_confirm.value) {
+      return setMessage(message, 'The passwords do not match.');
     }
 
     setMessage(message, '');
@@ -78,7 +86,15 @@ function initRegister() {
         });
         window.location.href = nextPage();
       } catch (error) {
-        setMessage(message, errorText(error));
+        const phoneTaken = error.status === 409 && error.details?.some((item) => item.field === 'phone');
+        const text = {
+          409: phoneTaken
+            ? 'This phone number is already used by another account.'
+            : 'This email is already registered. Please log in instead.',
+          422: 'Please check your details and try again.',
+          429: 'Too many attempts. Please wait a few minutes and try again.',
+        }[error.status];
+        setMessage(message, text ?? errorText(error));
       }
     });
     return undefined;
@@ -97,21 +113,29 @@ function initLogin() {
 
   const form = $('login-form');
   const message = $('form-message');
-  if (params.get('expired')) setMessage(message, 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  if (params.get('expired')) setMessage(message, 'Your session has expired. Please log in again.');
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const email = form.elements.email.value.trim();
+    const identifier = form.elements.identifier.value.trim();
     const password = form.elements.password.value;
-    if (!email || !password) return setMessage(message, 'กรุณากรอกอีเมลและรหัสผ่าน');
+    if (!identifier || !password) {
+      return setMessage(message, 'Please enter your email or phone number and your password.');
+    }
 
     setMessage(message, '');
     await withBusy(form.querySelector('button[type="submit"]'), async () => {
       try {
-        await api.userLogin(email, password);
+        await api.userLogin(identifier, password);
         window.location.href = nextPage();
       } catch (error) {
-        setMessage(message, errorText(error));
+        // ข้อความจาก API เป็นภาษาไทย หน้านี้แสดงเป็นอังกฤษจึงแปลงตามรหัสสถานะ
+        const text = {
+          401: 'Incorrect email, phone number or password.',
+          403: 'This account has been suspended. Please contact our staff.',
+          429: 'Too many login attempts. Please wait 15 minutes and try again.',
+        }[error.status];
+        setMessage(message, text ?? errorText(error));
       }
     });
     return undefined;
@@ -276,7 +300,11 @@ function initAccount() {
         renderAuthNav();
         setMessage(message, 'Your details have been saved.', true);
       } catch (error) {
-        handleError(error, message);
+        if (error.status === 409 && error.details?.some((item) => item.field === 'phone')) {
+          setMessage(message, 'This phone number is already used by another account.');
+        } else {
+          handleError(error, message);
+        }
       }
     });
   });

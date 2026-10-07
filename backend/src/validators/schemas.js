@@ -231,6 +231,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'ต้องกรอกรหัสผ่าน').max(200),
 });
 
+// ลูกค้าล็อกอินด้วยอีเมลหรือเบอร์โทรก็ได้ — identifier คือสิ่งที่พิมพ์ในช่องเดียวนั้น (รับ email แบบเดิมด้วย)
+export const userLoginSchema = z
+  .object({
+    identifier: z.string().trim().min(1, 'ต้องกรอกอีเมลหรือเบอร์โทร').max(160).optional(),
+    email: z.string().trim().max(160).optional(),
+    password: z.string().min(1, 'ต้องกรอกรหัสผ่าน').max(200),
+  })
+  .refine((data) => Boolean(data.identifier ?? data.email), {
+    message: 'ต้องกรอกอีเมลหรือเบอร์โทร',
+    path: ['identifier'],
+  });
+
 const password = z
   .string()
   .min(8, 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร')

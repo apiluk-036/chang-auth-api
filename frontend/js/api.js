@@ -182,7 +182,8 @@ export const api = {
 
   // ---------- สมาชิก ----------
   register: (payload) => startSession('/account/register', payload),
-  userLogin: (email, password) => startSession('/account/login', { email, password }),
+  // identifier = อีเมลหรือเบอร์โทร
+  userLogin: (identifier, password) => startSession('/account/login', { identifier, password }),
   userLogout: () => currentUser.clear(),
   profile: async () => {
     const user = await data(member('/account/me'));
