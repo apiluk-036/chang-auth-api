@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- ภาษาที่ผู้ใช้เลือก (EN/TH) ต้องรู้ก่อนวาดหน้า ดู js/i18n.js -->
+    <script src="js/lang-boot.js"></script>
     <title>Chokchai Elephant Camp | ปางช้างเชิงอนุรักษ์ เชียงใหม่</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
@@ -17,8 +19,13 @@
             colors: {
               forest: "#21452A",
               "forest-dark": "#183420",
-              gold: "#BA9330",
-              cream: "#F9F8F2",
+              // ชื่อ gold / cream คงไว้เพื่อไม่ต้องไล่แก้ class ทั้งเว็บ — ค่าจริงคือเขียวเน้นและขาวอุ่น
+              gold: "#2F7F55",
+              cream: "#FFFCF7",
+              // ส้มอิฐใช้กับปุ่มจองเท่านั้น
+              brick: "#BF4E2B",
+              "brick-dark": "#A34022",
+              mint: "#CFE8D0",
               dark: "#252520",
             },
             fontFamily: {
@@ -61,7 +68,7 @@
 
     <!-- ===== HEADER ===== -->
     <header
-      class="fixed inset-x-0 top-0 z-40 bg-white/30 backdrop-blur border-b border-white/30"
+      class="fixed inset-x-0 top-0 z-40 bg-white/90 backdrop-blur border-b border-forest/10"
     >
       <div
         class="max-w-8xl mx-auto px-6 lg:px-10 h-20 lg:h-20 flex items-center justify-between"
@@ -90,17 +97,12 @@
           <a href="index.html#contact" class="hover:text-forest transition">Contact us</a>
         </nav>
 
-        <div class="flex items-center gap-3 lg:gap-10 md:ml-10">
-          <!-- ลิงก์ My Booking / Log in หรือชื่อสมาชิก เติมโดย js/inquiry.js -->
+        <div class="flex items-center gap-2 sm:gap-3 md:ml-8">
+          <!-- ปุ่มสลับภาษา + ปุ่ม Log in หรือชื่อสมาชิก เติมโดย js/inquiry.js -->
           <div
             data-auth-nav
-            class="hidden lg:flex items-center gap-8 lg:gap-10 text-base lg:text-lg font-semibold text-dark"
+            class="flex items-center text-base font-semibold text-dark"
           ></div>
-          <a
-            href="activities.html"
-            class="hidden sm:inline-block bg-forest hover:bg-forest/90 text-white text-base lg:text-lg font-semibold px-6 lg:px-7 py-3 rounded-lg shadow-md transition"
-            >Book Now</a
-          >
           <button
             id="nav-toggle"
             class="md:hidden p-2 text-forest"
@@ -122,7 +124,7 @@
       <!-- Mobile menu -->
       <div
         id="mobile-menu"
-        class="hidden md:hidden bg-white/80 backdrop-blur-md border-t border-white/40 px-6 py-4 flex flex-col gap-4 text-base font-semibold text-dark"
+        class="hidden md:hidden bg-white/95 backdrop-blur-md border-t border-forest/10 px-6 py-4 flex flex-col gap-4 text-base font-semibold text-dark"
       >
         <a href="index.html">Home</a>
         <a href="index.html#blog">Blog</a>
@@ -130,12 +132,6 @@
         <a href="index.html#reviews">Review</a>
         <a href="index.html#map">Maps</a>
         <a href="index.html#contact">Contact us</a>
-        <div data-auth-nav class="flex flex-col gap-4"></div>
-        <a
-          href="activities.html"
-          class="bg-forest text-white text-center px-6 py-3 rounded-lg"
-          >Book Now</a
-        >
       </div>
     </header>
 
@@ -156,7 +152,7 @@
         <span class="text-gold font-semibold text-sm tracking-wide"
           > </span
         >
-        <h1 class="font-script font-bold text-[#D4AE4C] text-5xl lg:text-7xl leading-tight max-w-3xl [text-shadow:0_2px_4px_rgba(0,0,0,0.6),0_4px_20px_rgba(0,0,0,0.45)]">
+        <h1 class="font-script font-bold text-white text-5xl lg:text-7xl leading-tight max-w-3xl [text-shadow:0_2px_4px_rgba(0,0,0,0.6),0_4px_20px_rgba(0,0,0,0.45)]">
   Wild Days. Epic Memories.
 </h1>
         <p
@@ -168,7 +164,7 @@
         <div class="flex flex-wrap justify-center gap-4 mt-2">
           <a
             href="activities.html"
-            class="bg-gold hover:bg-gold/90 px-8 py-4 rounded-lg font-bold transition"
+            class="bg-brick hover:bg-brick-dark px-8 py-4 rounded-lg font-bold transition"
             >Book Now</a
           >
           <a
@@ -190,7 +186,7 @@
         class="absolute inset-0 w-full h-full object-cover"
       />
       <!-- Gold overlay (fades the background) -->
-      <div class="absolute inset-0 bg-[#EFE4C2]/80"></div>
+      <div class="absolute inset-0 bg-[#FFFCF7]/85"></div>
 
       <div class="relative max-w-7xl mx-auto px-6 lg:px-10 pt-20 pb-12">
         <div class="grid md:grid-cols-2 gap-10 lg:gap-14 items-center">
@@ -273,7 +269,7 @@
     <div class="flex flex-col gap-6">
       <h2 class="font-script leading-tight">
         <span class="block text-5xl lg:text-6xl text-white">Take a Journey Beyond</span>
-        <span class="block text-4xl lg:text-6xl text-[#F3E3B5] mt-2">Chokchai Elephant Camp</span>
+        <span class="block text-4xl lg:text-6xl text-mint mt-2">Chokchai Elephant Camp</span>
       </h2>
       <p class="font-['Josefin_Sans',sans-serif] text-white/85 text-lg leading-relaxed max-w-xl">
         Get to know our elephants, explore life in the jungle, and discover the stories behind Chokchai Elephant Camp. From elephant care to unforgettable adventures, there’s always something new to discover.
@@ -292,7 +288,7 @@
        class="group block bg-white rounded-3xl overflow-hidden shadow-2xl hover:-translate-y-1 transition duration-300">
       <img id="featured-image" src="" alt="" class="img-placeholder w-full h-56 lg:h-72 object-cover">
       <div class="p-7 lg:p-9 flex flex-col gap-3">
-        <span id="featured-category" class="text-xs font-bold uppercase tracking-wider text-gold"></span>
+        <span id="featured-category" class="text-xs font-bold uppercase tracking-wider text-mint"></span>
         <h3 id="featured-title" class="font-script text-3xl lg:text-4xl text-forest leading-tight group-hover:text-forest-dark"></h3>
         <p id="featured-excerpt" class="text-gray-600 leading-relaxed"></p>
       </div>
@@ -313,7 +309,7 @@
         class="absolute inset-0 w-full h-full object-cover"
       />
       <!-- Light overlay (fades the background) -->
-      <div class="absolute inset-0 bg-[#F3EEDD]/80"></div>
+      <div class="absolute inset-0 bg-[#FFFCF7]/85"></div>
 
       <div class="relative max-w-7xl mx-auto px-6 lg:px-10 py-20">
         <!-- Heading -->
@@ -588,7 +584,7 @@
         <div class="flex justify-center mt-16">
           <a
             href="activities.html"
-            class="bg-forest hover:bg-forest/90 text-white text-xl lg:text-2xl font-semibold px-16 lg:px-20 py-4 lg:py-5 rounded-2xl shadow-lg hover:shadow-xl transition"
+            class="bg-brick hover:bg-brick-dark text-white text-xl lg:text-2xl font-semibold px-16 lg:px-20 py-4 lg:py-5 rounded-2xl shadow-lg hover:shadow-xl transition"
           >
             Book Now!
           </a>
@@ -650,13 +646,13 @@
     </script>
 
 <!-- ===== REVIEWS ===== -->
-<section id="reviews" class="bg-[#E5E2DA]">
+<section id="reviews" class="bg-[#F2F7F1]">
   <div class="max-w-7xl mx-auto px-6 lg:px-24 py-20">
     <div class="text-center mb-12">
       <span class="text-gold font-bold text-sm">What Our Visitors Say</span>
       <h2 class="font-script text-forest-dark text-4xl lg:text-5xl mt-3">Reviews from Google</h2>
       <a id="reviews-summary" href="#" target="_blank" rel="noopener"
-         class="hidden mt-5 items-center gap-3 bg-[#F7F4EC] rounded-full shadow-md px-5 py-2.5 hover:shadow-lg transition">
+         class="hidden mt-5 items-center gap-3 bg-[#FFFFFF] rounded-full shadow-md px-5 py-2.5 hover:shadow-lg transition">
         <span id="reviews-rating" class="font-extrabold text-xl text-dark"></span>
         <span id="reviews-stars" class="text-[#F2B33D] tracking-wider"></span>
         <span id="reviews-total" class="text-sm text-gray-600"></span>
@@ -716,7 +712,7 @@
 <!-- ===== FAQ / ASK A QUESTION ===== -->
 <section id="contact" class="bg-white">
   <div class="max-w-7xl mx-auto px-6 lg:px-10 py-24 grid md:grid-cols-2 gap-14 items-center">
-    <div class="bg-[#F9F8F3] rounded-2xl border border-gray-200 overflow-hidden">
+    <div class="bg-[#FFFCF7] rounded-2xl border border-gray-200 overflow-hidden">
       <a href="faq.html" class="bg-forest-dark px-5 py-4 text-white font-bold flex items-center justify-between hover:bg-forest transition">
         <span>FAQs</span>
         <span class="text-sm font-semibold text-white/80">View all answers &#8250;</span>
@@ -761,10 +757,10 @@
       <h2 class="font-script text-forest-dark text-5xl">Send us Your Question</h2>
       <p class="text-gray-600 text-sm">Our team will respond within 24 hours</p>
       <input type="text" placeholder="Your email or phone number"
-             class="bg-[#F7F6F1] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gold" />
+             class="bg-[#FFFCF7] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gold" />
       <textarea placeholder="Type your question here..." rows="4"
-                class="bg-[#F7F6F1] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gold"></textarea>
-      <button class="bg-gold hover:bg-gold/90 text-white font-bold py-3.5 rounded-lg w-fit px-7 transition">Send Question</button>
+                class="bg-[#FFFCF7] border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-gold"></textarea>
+      <button class="bg-forest hover:bg-forest-dark text-white font-bold py-3.5 rounded-lg w-fit px-7 transition">Send Question</button>
     </div>
   </div>
 </section>
@@ -784,7 +780,7 @@
           </p>
         </div>
         <div>
-          <p class="text-gold font-bold mb-3">Menu</p>
+          <p class="text-mint font-bold mb-3">Menu</p>
           <ul class="text-white/80 text-sm flex flex-col gap-2.5">
             <li><a href="index.html" class="hover:text-white">Home</a></li>
             <li>
@@ -810,7 +806,7 @@
           </ul>
         </div>
         <div>
-          <p class="text-gold font-bold mb-3">Contact us</p>
+          <p class="text-mint font-bold mb-3">Contact us</p>
           <ul class="text-white/80 text-sm flex flex-col gap-2.5">
             <li>
               Tel:
@@ -836,19 +832,19 @@
           </ul>
         </div>
         <div>
-          <p class="text-gold font-bold mb-3">Follow us</p>
+          <p class="text-mint font-bold mb-3">Follow us</p>
           <!-- ลิงก์ https ปกติ — บนมือถือที่ติดตั้งแอปไว้ ระบบจะเปิดในแอป Facebook / X / Instagram / TikTok ให้เอง -->
           <div class="flex gap-3">
-            <a href="https://www.facebook.com/chokchaielephant" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://www.facebook.com/chokchaielephant" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="18" height="18" viewBox="0 0 320 512" fill="currentColor" aria-hidden="true"><path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z"/></svg>
             </a>
-            <a href="https://x.com/chokchai_camp" target="_blank" rel="noopener" aria-label="X (Twitter)" title="X (Twitter)" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://x.com/chokchai_camp" target="_blank" rel="noopener" aria-label="X (Twitter)" title="X (Twitter)" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865z"/></svg>
             </a>
-            <a href="https://www.instagram.com/chokchaielephantcamp.official/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://www.instagram.com/chokchaielephantcamp.official/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
             </a>
-            <a href="https://www.tiktok.com/@chokchai.elephantcamp" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://www.tiktok.com/@chokchai.elephantcamp" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3z"/></svg>
             </a>
           </div>

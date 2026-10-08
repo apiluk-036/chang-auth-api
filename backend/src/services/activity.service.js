@@ -1,6 +1,6 @@
 import { db } from '../db/knex.js';
 import ApiError from '../utils/ApiError.js';
-import { toBoolean, toNumber } from '../utils/helpers.js';
+import { parsePriceTiers, toBoolean, toNumber } from '../utils/helpers.js';
 
 const COLUMNS = [
   'id',
@@ -21,6 +21,8 @@ const COLUMNS = [
   'image_url',
   'daily_capacity',
   'includes_transfer',
+  'adults_only',
+  'group_pricing',
   'sort_order',
   'is_active',
   'created_at',
@@ -37,6 +39,9 @@ export function serializeActivity(row) {
     infant_price: toNumber(row.infant_price),
     is_active: toBoolean(row.is_active),
     includes_transfer: toBoolean(row.includes_transfer),
+    adults_only: toBoolean(row.adults_only),
+    // ราคาเหมาต่อกลุ่มที่แปลงแล้ว ([] = คิดราคาต่อคน) ให้หน้าเว็บคำนวณยอดได้ตรงกับ API
+    price_tiers: parsePriceTiers(row.group_pricing),
   };
 }
 

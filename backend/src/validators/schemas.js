@@ -50,6 +50,7 @@ export const activityBodySchema = z.object({
   name: trimmed(160, 'ชื่อกิจกรรม (อังกฤษ)'),
   name_th: trimmed(160, 'ชื่อกิจกรรม (ไทย)'),
   description_th: z.string().trim().max(2000).optional(),
+  // ข้อความภาษาอังกฤษ เว้นว่างได้ หน้าเว็บจะใช้ภาษาไทยแทน
   description_en: z.string().trim().max(2000).optional(),
   highlights: z.string().trim().max(2000).optional(),
   highlights_en: z.string().trim().max(2000).optional(),
@@ -64,7 +65,16 @@ export const activityBodySchema = z.object({
   daily_capacity: z.coerce.number().int().min(1).max(10_000).default(40),
   sort_order: z.coerce.number().int().min(0).default(0),
   is_active: z.coerce.boolean().default(true),
+  // false = ไม่รวมรับ-ส่ง ฟอร์มจองไม่ถามจุดรับ
   includes_transfer: z.coerce.boolean().default(true),
+  adults_only: z.coerce.boolean().default(false),
+  // ราคาเหมาต่อกลุ่ม "จำนวนคนสูงสุด=ราคา" คั่นด้วย comma เช่น 3=1500,4=2000 — เว้นว่าง = คิดราคาต่อคน
+  group_pricing: z
+    .string()
+    .trim()
+    .max(200)
+    .regex(/^$|^\d+\s*=\s*\d+(\.\d+)?(\s*,\s*\d+\s*=\s*\d+(\.\d+)?)*$/, 'ราคาเหมาต้องอยู่ในรูปแบบ 3=1500,4=2000')
+    .optional(),
 });
 
 // ตอนแก้ไขต้องไม่เติมค่า default ให้ฟิลด์ที่ไม่ได้ส่งมา ไม่งั้นแก้ราคาอย่างเดียวจะรีเซ็ตโควตาไปด้วย
@@ -166,6 +176,7 @@ export const bookingListQuery = z.object({
   q: z.string().trim().max(120).optional(),
 });
 
+// ส่งออก Excel ใช้ตัวกรองชุดเดียวกับหน้ารายการ แต่เอาทุกแถวที่ตรงเงื่อนไข ไม่แบ่งหน้า
 export const bookingExportQuery = bookingListQuery.omit({ page: true, limit: true });
 
 export const bookingStatusSchema = z
@@ -234,14 +245,15 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'ต้องกรอกรหัสผ่าน').max(200),
 });
 
-// ลูกค้าล็อกอินด้วยอีเมลหรือเบอร์โทรก็ได้ — identifier คือสิ่งที่พิมพ์ในช่องเดียวนั้น (รับ email แบบเดิมด้วย)
+// ลูกค้าเข้าสู่ระบบด้วยอีเมลหรือเบอร์โทร — ยังรับฟิลด์ email แบบเดิมไว้ให้ client เก่าใช้ต่อได้
 export const userLoginSchema = z
   .object({
-    identifier: z.string().trim().min(1, 'ต้องกรอกอีเมลหรือเบอร์โทร').max(160).optional(),
+    identifier: z.string().trim().max(160).optional(),
     email: z.string().trim().max(160).optional(),
     password: z.string().min(1, 'ต้องกรอกรหัสผ่าน').max(200),
   })
-  .refine((data) => Boolean(data.identifier ?? data.email), {
+  .transform(({ identifier, email, password }) => ({ identifier: identifier || email || '', password }))
+  .refine((data) => data.identifier.length > 0, {
     message: 'ต้องกรอกอีเมลหรือเบอร์โทร',
     path: ['identifier'],
   });

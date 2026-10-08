@@ -2,6 +2,8 @@
  * ของที่ทุกหน้าของเว็บหน้าบ้านใช้ร่วมกัน: header/footer, ลิงก์บัญชีผู้ใช้, ป้ายสถานะ, การ์ดการจอง
  */
 import { api, currentUser, formatTHB } from './api.js';
+import { initChatWidget } from './chat-widget.js';
+import { initI18n, isThai, renderLangSwitch, t } from './i18n.js';
 
 export const escapeHtml = (value) =>
   String(value ?? '').replace(
@@ -45,7 +47,7 @@ export const CONTACT_APPS = {
   Instagram: { idLabel: 'ชื่อบัญชี Instagram (IG)', placeholder: 'เช่น @somchai.travel' },
 };
 
-/* ข้อความภาษาอังกฤษของหน้าที่แสดงเป็นอังกฤษ (ตอนนี้คือหน้าบัญชีของฉัน) — หน้าอื่นและหลังบ้านยังใช้ชุดภาษาไทยข้างบน */
+/* ข้อความภาษาอังกฤษของเว็บหน้าบ้าน — หน้าบ้านส่ง lang ปัจจุบันจาก js/i18n.js เข้ามา ส่วนหลังบ้านใช้ชุดภาษาไทยข้างบนเสมอ */
 const EN = {
   locale: 'en-GB',
   bookingStatus: { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled' },
@@ -102,12 +104,21 @@ const CATEGORY_LABELS_EN = {
 export const categoryLabel = (category, lang = 'th') =>
   (lang === 'en' ? CATEGORY_LABELS_EN : CATEGORY_LABELS)[category] ?? category;
 
+/** ช่วงอายุของราคาแต่ละประเภท — แก้ที่นี่ที่เดียว ทุกหน้าที่แสดงราคาอ่านจากตรงนี้ */
+export const AGE_GROUPS = {
+  adult: { en: 'Age 10+', th: 'อายุ 10 ปีขึ้นไป' },
+  child: { en: 'Age 4-9', th: 'อายุ 4-9 ปี' },
+  infant: { en: 'Age 0-3', th: 'อายุ 0-3 ปี' },
+};
+
+export const ageLabel = (group) => t(AGE_GROUPS[group].en, AGE_GROUPS[group].th);
+
 /** รูปกิจกรรม ถ้าไม่มีไฟล์จริงให้ถอยกลับไปใช้ลายทแยง .img-placeholder */
 export function activityMedia(activity, extraClasses = '') {
   if (!activity.image_url) {
     return `<div class="img-placeholder ${extraClasses}"></div>`;
   }
-  return `<img src="${escapeHtml(activity.image_url)}" alt="${escapeHtml(activity.name_th)}"
+  return `<img src="${escapeHtml(activity.image_url)}" alt="${escapeHtml(t(activity.name, activity.name_th))}"
     class="${extraClasses} object-cover w-full"
     onerror="this.classList.add('img-placeholder');this.removeAttribute('src');">`;
 }
@@ -135,7 +146,7 @@ function renderChrome() {
     // sticky ต้องอยู่ที่ตัว wrapper เพราะ <header> ข้างในสูงเท่า wrapper พอดี จะไม่มีระยะให้เกาะ
     header.className = 'sticky top-0 z-40';
     header.innerHTML = `
-    <header class="bg-white/30 backdrop-blur border-b border-white/30">
+    <header class="bg-white/90 backdrop-blur border-b border-forest/10">
       <div class="mx-auto px-6 lg:px-10 h-20 flex items-center justify-between">
         <a href="index.html" class="flex items-center gap-3 lg:gap-5">
           <img src="images/Logo.webp" alt="โลโก้ปางช้างโชคชัย" class="h-12 lg:h-16 w-auto" />
@@ -144,18 +155,15 @@ function renderChrome() {
         <nav class="hidden md:flex items-center ml-auto gap-8 lg:gap-10 text-base lg:text-lg font-semibold text-dark">
           ${NAV_LINKS.map(([href, label]) => `<a href="${href}" class="hover:text-forest transition">${label}</a>`).join('')}
         </nav>
-        <div class="flex items-center gap-3 lg:gap-10 md:ml-10">
-          <div data-auth-nav class="hidden lg:flex items-center gap-8 lg:gap-10 text-base lg:text-lg font-semibold text-dark"></div>
-          <a href="activities.html" class="hidden sm:inline-block bg-forest hover:bg-forest/90 text-white text-base lg:text-lg font-semibold px-6 lg:px-7 py-3 rounded-lg shadow-md transition">Book Now</a>
+        <div class="flex items-center gap-2 sm:gap-3 md:ml-8">
+          <div data-auth-nav class="flex items-center text-base font-semibold text-dark"></div>
           <button id="nav-toggle" class="md:hidden p-2 text-forest" aria-label="เปิดเมนู">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
           </button>
         </div>
       </div>
-      <div id="mobile-menu" class="hidden md:hidden bg-white/80 backdrop-blur-md border-t border-white/40 px-6 py-4 flex flex-col gap-4 text-base font-semibold text-dark">
+      <div id="mobile-menu" class="hidden md:hidden bg-white/95 backdrop-blur-md border-t border-forest/10 px-6 py-4 flex flex-col gap-4 text-base font-semibold text-dark">
         ${NAV_LINKS.map(([href, label]) => `<a href="${href}">${label}</a>`).join('')}
-        <div data-auth-nav class="flex flex-col gap-4"></div>
-        <a href="activities.html" class="bg-forest text-white text-center px-6 py-3 rounded-lg">Book Now</a>
       </div>
     </header>`;
   }
@@ -179,7 +187,7 @@ function renderChrome() {
           <p class="text-white/80 text-sm mt-3" data-setting="opening_hours"></p>
         </div>
         <div>
-          <p class="text-gold font-bold mb-3">Menu</p>
+          <p class="text-mint font-bold mb-3">Menu</p>
           <ul class="text-white/80 text-sm flex flex-col gap-2.5">
             <li><a href="index.html" class="hover:text-white">Home</a></li>
             <li><a href="activities.html" class="hover:text-white">Activities</a></li>
@@ -191,7 +199,7 @@ function renderChrome() {
           </ul>
         </div>
         <div>
-          <p class="text-gold font-bold mb-3">Contact us</p>
+          <p class="text-mint font-bold mb-3">Contact us</p>
           <ul class="text-white/80 text-sm flex flex-col gap-2.5">
             <li>Tel: <span data-setting="contact_phone">095-447-2547</span></li>
             <li class="flex gap-1">
@@ -204,19 +212,19 @@ function renderChrome() {
           </ul>
         </div>
         <div>
-          <p class="text-gold font-bold mb-3">Follow us</p>
+          <p class="text-mint font-bold mb-3">Follow us</p>
           <!-- ลิงก์ https ปกติ — บนมือถือที่ติดตั้งแอปไว้ ระบบจะเปิดในแอป Facebook / X / Instagram / TikTok ให้เอง -->
           <div class="flex gap-3">
-            <a href="https://www.facebook.com/chokchaielephant" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://www.facebook.com/chokchaielephant" target="_blank" rel="noopener" aria-label="Facebook" title="Facebook" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="18" height="18" viewBox="0 0 320 512" fill="currentColor" aria-hidden="true"><path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z"/></svg>
             </a>
-            <a href="https://x.com/chokchai_camp" target="_blank" rel="noopener" aria-label="X (Twitter)" title="X (Twitter)" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://x.com/chokchai_camp" target="_blank" rel="noopener" aria-label="X (Twitter)" title="X (Twitter)" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865z"/></svg>
             </a>
-            <a href="https://www.instagram.com/chokchaielephantcamp.official/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://www.instagram.com/chokchaielephantcamp.official/" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
             </a>
-            <a href="https://www.tiktok.com/@chokchai.elephantcamp" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-gold hover:text-white transition">
+            <a href="https://www.tiktok.com/@chokchai.elephantcamp" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-forest-dark shadow-sm hover:bg-mint transition">
               <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3z"/></svg>
             </a>
           </div>
@@ -239,28 +247,34 @@ function initMobileNav() {
 }
 
 /**
- * เติมลิงก์บัญชีลงในทุกจุดที่มี data-auth-nav (ใช้ทั้งหน้าแรกและหน้าย่อย)
- * ยังไม่ล็อกอิน: My Booking / Log in — ล็อกอินแล้ว: ไอคอนรูปคน + ชื่อ ลิงก์ไปหน้าบัญชี
+ * ปุ่มบัญชีมุมขวาบนของ header (จุดที่มี data-auth-nav) ใช้ทั้งหน้าแรกและหน้าย่อย
+ * ยังไม่ล็อกอิน: Log in — ล็อกอินแล้ว: ชื่อสมาชิก ลิงก์ไปหน้าบัญชี
+ * จอมือถือเหลือแค่ไอคอนรูปคน (ข้อความซ่อนด้วย hidden sm:inline แต่ยังอยู่ใน aria-label)
  */
 export function renderAuthNav() {
   const user = currentUser.get();
-  const linkClass = 'hover:text-forest transition whitespace-nowrap';
-  const html = user
-    ? `<a href="account.html" title="My account" aria-label="My account: ${escapeHtml(user.first_name)}"
-          class="${linkClass} inline-flex items-center gap-2">
-         <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest text-white">
-           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-             <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
-           </svg>
-         </span>
-         <span>${escapeHtml(user.first_name)}</span>
-       </a>`
-    : `<a href="booking.html" class="${linkClass}">My Booking</a>
-       <a href="login.html" class="${linkClass}">Log in</a>`;
+  const label = user ? escapeHtml(user.first_name) : 'Log in';
+  const href = user ? 'account.html' : 'login.html';
+  const html = `
+    <a href="${href}" aria-label="${user ? `My account: ${label}` : 'Log in'}"
+       class="inline-flex items-center gap-2 rounded-full border border-forest/30 bg-white text-forest p-2 sm:py-1.5 sm:pl-2 sm:pr-4 hover:bg-forest hover:text-white transition whitespace-nowrap">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+      </svg>
+      <span class="hidden sm:inline max-w-[9rem] truncate">${label}</span>
+    </a>`;
 
   for (const slot of document.querySelectorAll('[data-auth-nav]')) slot.innerHTML = html;
+
+  // ทุกหน้าของเว็บหน้าบ้านเรียกฟังก์ชันนี้ตอนโหลด จึงใช้เป็นจุดเริ่มของสิ่งที่ต้องมีทุกหน้า (แต่ละตัวทำงานครั้งเดียว)
+  renderLangSwitch();
+  initI18n();
+  initChatWidget();
 }
+
+/** ค่าตั้งระบบที่แอดมินพิมพ์เป็นไทย เช่น เวลารับ "06:00 - 06:30 น." — หน้าอังกฤษตัดหน่วย "น." ออก */
+const settingText = (value) => (isThai ? value : String(value).replace(/\s*น\.\s*$/, ''));
 
 let settingsPromise;
 
@@ -276,7 +290,7 @@ async function applySettings() {
 
   for (const element of document.querySelectorAll('[data-setting]')) {
     const value = settings[element.dataset.setting];
-    if (value !== undefined && value !== '') element.textContent = value;
+    if (value !== undefined && value !== '') element.textContent = settingText(value);
   }
 
   if (settings.site_notice) {
@@ -447,7 +461,7 @@ export function bookingCard(booking, { paymentProvider, lang = 'th' } = {}) {
     ${
       canPay || canCancel
         ? `<div class="flex flex-wrap gap-3">
-            ${canPay ? `<button type="button" data-action="pay" data-ref="${ref}" class="bg-gold hover:bg-gold/90 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition">${text.pay} ${formatTHB(booking.total_amount)}</button>` : ''}
+            ${canPay ? `<button type="button" data-action="pay" data-ref="${ref}" class="bg-forest hover:bg-forest-dark text-white text-sm font-bold px-5 py-2.5 rounded-lg transition">${text.pay} ${formatTHB(booking.total_amount)}</button>` : ''}
             ${canCancel ? `<button type="button" data-action="cancel" data-ref="${ref}" class="border border-red-300 text-red-700 hover:bg-red-50 text-sm font-bold px-5 py-2.5 rounded-lg transition">${text.cancel}</button>` : ''}
           </div>`
         : ''

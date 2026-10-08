@@ -33,7 +33,7 @@ docker compose ps postgres
 
 | ตาราง | คำอธิบาย |
 | --- | --- |
-| `activities` | 6 กิจกรรม + 6 แพ็กเกจรวมกิจกรรม |
+| `activities` | 6 เซ็ทกิจกรรม |
 | `bookings` | การจองทั้งหมด |
 | `reviews` | รีวิว |
 | `faqs` | คำถามที่พบบ่อย |

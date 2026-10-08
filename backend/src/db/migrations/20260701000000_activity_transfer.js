@@ -5,6 +5,7 @@
  */
 
 export async function up(knex) {
+  if (await knex.schema.hasColumn('activities', 'includes_transfer')) return;
   await knex.schema.alterTable('activities', (table) => {
     table.boolean('includes_transfer').notNullable().defaultTo(true);
   });

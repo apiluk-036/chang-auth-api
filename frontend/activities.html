@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- ภาษาที่ผู้ใช้เลือก (EN/TH) ต้องรู้ก่อนวาดหน้า ดู js/i18n.js -->
+<script src="js/lang-boot.js"></script>
 <title>Activities | Chokchai Elephant Camp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -106,25 +108,27 @@
           <p id="availability-label" class="text-sm mt-2" role="status" aria-live="polite"></p>
         </div>
         <p class="font-bold text-sm">Number of guests</p>
+        <!-- กิจกรรมราคาเหมาต่อกลุ่ม (เช่น ล่องแพ): js/app.js เติมช่วงราคาให้ -->
+        <p id="group-price-note" class="hidden bg-[#F2F7F1] border border-forest/10 text-forest-dark text-sm rounded-lg px-4 py-3"></p>
         <div class="grid sm:grid-cols-3 gap-4">
           <div>
-            <label for="qty-adult" class="text-sm font-semibold block mb-2">Adults (<span id="input-adult-price"></span>)</label>
+            <label for="qty-adult" class="text-sm font-semibold block mb-2">Adults (<span id="input-adult-price"></span>)<span data-age="adult" class="block text-xs font-normal text-gray-500 mt-0.5"></span></label>
             <div class="flex items-center border border-gray-300 rounded-lg bg-cream overflow-hidden">
               <button type="button" data-qty-btn="dec" data-target="qty-adult" class="px-4 py-3 font-bold text-forest">-</button>
               <input id="qty-adult" name="adults" type="number" value="2" min="0" max="100" class="w-full text-center bg-transparent py-3" />
               <button type="button" data-qty-btn="inc" data-target="qty-adult" class="px-4 py-3 font-bold text-forest">+</button>
             </div>
           </div>
-          <div>
-            <label for="qty-child" class="text-sm font-semibold block mb-2">Children (<span id="input-child-price"></span>)</label>
+          <div id="qty-child-field">
+            <label for="qty-child" class="text-sm font-semibold block mb-2">Children (<span id="input-child-price"></span>)<span data-age="child" class="block text-xs font-normal text-gray-500 mt-0.5"></span></label>
             <div class="flex items-center border border-gray-300 rounded-lg bg-cream overflow-hidden">
               <button type="button" data-qty-btn="dec" data-target="qty-child" class="px-4 py-3 font-bold text-forest">-</button>
               <input id="qty-child" name="children" type="number" value="0" min="0" max="100" class="w-full text-center bg-transparent py-3" />
               <button type="button" data-qty-btn="inc" data-target="qty-child" class="px-4 py-3 font-bold text-forest">+</button>
             </div>
           </div>
-          <div>
-            <label for="qty-infant" class="text-sm font-semibold block mb-2">Infants (0 ฿)</label>
+          <div id="qty-infant-field">
+            <label for="qty-infant" class="text-sm font-semibold block mb-2">Infants (<span id="input-infant-price"></span>)<span data-age="infant" class="block text-xs font-normal text-gray-500 mt-0.5"></span></label>
             <div class="flex items-center border border-gray-300 rounded-lg bg-cream overflow-hidden">
               <button type="button" data-qty-btn="dec" data-target="qty-infant" class="px-4 py-3 font-bold text-forest">-</button>
               <input id="qty-infant" name="infants" type="number" value="0" min="0" max="100" class="w-full text-center bg-transparent py-3" />
@@ -192,9 +196,7 @@
       <div id="step-panel-3" class="hidden flex flex-col gap-5">
         <p id="pickup-heading" class="font-extrabold text-lg flex items-center gap-2">🚐 Pickup point</p>
         <!-- แพ็กเกจที่ไม่รวมรับ-ส่ง (includes_transfer = false): js/app.js ซ่อนส่วนเลือกจุดรับ แล้วแสดงข้อความนี้แทน -->
-        <p id="no-transfer-note" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3">
-          <strong>Transfer is not included in this package.</strong> Please make your own way to Chokchai Elephant Camp and arrive at the start of the round you choose below.
-        </p>
+        <p id="no-transfer-note" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3">Transfer is not included in this package. Please make your own way to Chokchai Elephant Camp and arrive at the start of the round you choose below.</p>
         <div id="pickup-fields" class="flex flex-col gap-5">
         <p class="font-semibold text-sm">Where would you like to be picked up?</p>
         <div class="flex flex-col gap-3">
@@ -289,7 +291,7 @@
         </label>
         <div class="flex justify-between">
           <button type="button" data-modal-action="back" class="border border-forest text-forest font-bold px-8 py-3.5 rounded-lg">Back</button>
-          <button type="button" id="checkout-button" data-modal-action="submit" class="bg-gold hover:bg-gold/90 text-white font-bold px-8 py-3.5 rounded-lg transition">
+          <button type="button" id="checkout-button" data-modal-action="submit" class="bg-brick hover:bg-brick-dark text-white font-bold px-8 py-3.5 rounded-lg transition">
             Confirm booking <span id="checkout-amount-btn"></span>
           </button>
         </div>
@@ -311,7 +313,7 @@
         <span id="success-note-offline">— our team will contact you with payment details within 24 hours</span>
       </p>
       <div class="flex flex-wrap justify-center gap-3">
-        <button type="button" id="success-pay" data-modal-action="pay" class="hidden bg-gold hover:bg-gold/90 text-white font-bold px-8 py-3.5 rounded-lg transition">
+        <button type="button" id="success-pay" data-modal-action="pay" class="hidden bg-forest hover:bg-forest-dark text-white font-bold px-8 py-3.5 rounded-lg transition">
           Pay now <span id="success-pay-amount"></span>
         </button>
         <a id="success-manage" href="booking.html" class="border border-forest text-forest font-bold px-8 py-3.5 rounded-lg">View my booking</a>

@@ -18,8 +18,8 @@ const DEFINITIONS = {
   booking_max_guests: { type: 'int', default: config.booking.maxGuestsPerBooking, public: true },
   cancel_free_hours: { type: 'int', default: 72, public: true },
   // เวลารับของแต่ละรอบ แสดงในขั้น "รับ-ส่ง" ของฟอร์มจอง
-  pickup_time_morning: { type: 'string', default: '06:00 - 06:30', public: true },
-  pickup_time_afternoon: { type: 'string', default: '11:30 - 12:00', public: true },
+  pickup_time_morning: { type: 'string', default: '06:00 - 06:30 น.', public: true },
+  pickup_time_afternoon: { type: 'string', default: '11:30 - 12:00 น.', public: true },
   // วิธีชำระเงินออนไลน์: mock / promptpay / stripe / none (ค่าเริ่มต้นมาจาก PAYMENT_PROVIDER ใน .env)
   payment_provider: { type: 'string', default: config.payment.provider, public: false },
   // บัญชีพร้อมเพย์ที่ใช้รับเงิน: เบอร์มือถือ 10 หลัก หรือเลข 13 หลัก และชื่อบัญชีที่ลูกค้าจะเห็นในแอปธนาคาร

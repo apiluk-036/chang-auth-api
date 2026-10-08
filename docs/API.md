@@ -67,8 +67,8 @@
     "booking_max_advance_days": 365,
     "booking_max_guests": 30,
     "cancel_free_hours": 72,
-    "pickup_time_morning": "06:00 - 06:30",
-    "pickup_time_afternoon": "11:30 - 12:00",
+    "pickup_time_morning": "06:00 - 06:30 น.",
+    "pickup_time_afternoon": "11:30 - 12:00 น.",
     "payment_provider": "mock"
   }
 }
@@ -399,8 +399,8 @@ token ของลูกค้าใช้เรียก `/api/admin/*` ไม�
 ## `POST /api/account/login`
 
 body: `{ "identifier": "...", "password": "..." }` — คำตอบรูปแบบเดียวกับ register
-`identifier` เป็นอีเมลหรือเบอร์โทรที่ผูกกับบัญชีก็ได้ (เบอร์พิมพ์รูปแบบไหนก็ได้ เช่น `081-234-5678`, `+66 81 234 5678`) ยังรับ `email` แบบเดิมด้วย
-เบอร์โทรซ้ำกับบัญชีอื่นไม่ได้: สมัครหรือแก้โปรไฟล์ด้วยเบอร์ที่มีคนใช้แล้วได้ `409` พร้อม `details[0].field = "phone"`
+`identifier` เป็นอีเมลหรือเบอร์โทรที่ลงทะเบียนไว้ก็ได้ (เบอร์โทรพิมพ์รูปแบบไหนก็ได้ เช่น `089-000-1111` หรือ `+66 89 000 1111`)
+ยังส่งเป็น `email` แบบเดิมได้ เบอร์โทรจึงต้องไม่ซ้ำกันระหว่างบัญชี — สมัครหรือแก้โปรไฟล์ด้วยเบอร์ที่มีคนใช้แล้วได้ `409` พร้อม `details[].field = "phone"`
 รหัสผิดได้ `401` บัญชีที่ถูกระงับได้ `403` จำกัด 20 ครั้งต่อ 15 นาที
 
 ## `GET /api/account/me` · `PATCH /api/account/me`
@@ -516,6 +516,12 @@ curl "http://localhost:8080/api/admin/bookings?status=pending&limit=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+## `GET /api/admin/bookings/export`
+
+ดาวน์โหลดรายการจองเป็นไฟล์ Excel (`.xlsx`) รับตัวกรองชุดเดียวกับ `GET /api/admin/bookings`
+(`status`, `payment_status`, `activity_id`, `date_from`, `date_to`, `q`) แต่ได้ทุกแถวที่ตรงเงื่อนไข ไม่แบ่งหน้า
+เกิน 20,000 แถวได้ `422` ให้กรองช่วงวันที่ให้แคบลง
+
 ## `GET /api/admin/bookings/:id`
 
 ## `GET /api/admin/bookings/:id/slip`
@@ -556,6 +562,7 @@ curl -X PATCH http://localhost:8080/api/admin/bookings/12 \
 ## `POST /api/admin/activities`
 
 ฟิลด์บังคับ: `slug`, `name`, `name_th`, `duration_label`, `adult_price`, `child_price`
+ข้อความภาษาอังกฤษ (ไม่บังคับ): `description_en`, `highlights_en`, `duration_label_en` — หน้าเว็บฝั่งลูกค้าใช้ค่านี้ ถ้าว่างจะใช้ภาษาไทยแทน
 `slug` ต้องเป็นตัวพิมพ์เล็ก ตัวเลข หรือขีดกลางเท่านั้น และห้ามซ้ำ (`409` ถ้าซ้ำ)
 
 ## `PATCH /api/admin/activities/:id`
@@ -587,11 +594,6 @@ curl -X PATCH http://localhost:8080/api/admin/bookings/12 \
 
 ส่ง `answer` และ/หรือ `status` — ถ้าส่ง `answer` มาโดยไม่ระบุ `status`
 ระบบจะตั้งเป็น `answered` และบันทึก `answered_at` ให้เอง
-
-## `GET /api/admin/bookings/export`
-
-ดาวน์โหลดรายการจองเป็นไฟล์ Excel (`.xlsx`) รับตัวกรองชุดเดียวกับ `GET /api/admin/bookings` (`status`, `payment_status`, `activity_id`, `date_from`, `date_to`, `q`) แต่ไม่แบ่งหน้า — ได้ทุกรายการที่ตรงตัวกรอง สูงสุด 20,000 แถว
-คำตอบเป็นไฟล์ ไม่ใช่ JSON (`Content-Disposition: attachment`) เบอร์โทรเก็บเป็นข้อความเพื่อไม่ให้เลข 0 ตัวหน้าหาย วันเวลาเป็นเวลาไทย
 
 ## `GET /api/admin/reports?from=YYYY-MM-DD&to=YYYY-MM-DD`
 

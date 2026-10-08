@@ -408,6 +408,9 @@ const activityFields = (isEdit) => [
   { name: 'description_en', label: 'คำอธิบาย (อังกฤษ — แสดงบนหน้าเลือกกิจกรรม)', type: 'textarea', wide: true, keepEmpty: true },
   { name: 'highlights', label: 'จุดเด่น (บรรทัดละ 1 ข้อ)', type: 'textarea', rows: 4, wide: true, keepEmpty: true },
   { name: 'highlights_en', label: 'จุดเด่น (อังกฤษ — บรรทัดละ 1 ข้อ)', type: 'textarea', rows: 4, wide: true, keepEmpty: true },
+  { name: 'group_pricing', label: 'ราคาเหมาต่อกลุ่ม (เว้นว่าง = คิดราคาต่อคน)', maxlength: 200, placeholder: '3=1500,4=2000', keepEmpty: true, wide: true,
+    help: 'รูปแบบ จำนวนคนสูงสุด=ราคา คั่นด้วย comma เช่น 3=1500,4=2000 คือ 1-3 คน 1,500 บาท และ 4 คน 2,000 บาท' },
+  { name: 'adults_only', label: 'ผู้เข้าร่วม', type: 'checkbox', checkboxLabel: 'รับเฉพาะผู้ใหญ่ (ฟอร์มจองไม่มีช่องเด็ก/ทารก)', wide: true },
   { name: 'includes_transfer', label: 'รับ-ส่ง', type: 'checkbox', checkboxLabel: 'รวมบริการรับ-ส่ง (ถ้าไม่ติ๊ก ฟอร์มจองจะไม่ถามจุดรับ)', wide: true },
   { name: 'is_active', label: 'สถานะ', type: 'checkbox', checkboxLabel: 'เปิดรับจอง (แสดงบนหน้าเว็บ)', wide: true },
 ];

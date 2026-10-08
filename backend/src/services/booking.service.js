@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { db, insertReturning } from '../db/knex.js';
 import config from '../config/index.js';
 import ApiError from '../utils/ApiError.js';
-import { generateBookingRef, toDateString, toNumber } from '../utils/helpers.js';
+import { generateBookingRef, groupPrice, parsePriceTiers, toBoolean, toDateString, toNumber } from '../utils/helpers.js';
 import { getBookingRules } from './settings.service.js';
 
 // การจองที่ยังไม่ถูกยกเลิก = นับเป็นที่นั่งที่ถูกใช้ไปแล้ว
@@ -33,6 +33,10 @@ export function serializeBooking(row) {
 
 /** คำนวณยอดรวมจากราคาในฐานข้อมูล — ไม่ใช้ราคาที่ client ส่งมา */
 export function calculateTotal(activity, { adults, children, infants }) {
+  // กิจกรรมราคาเหมาต่อกลุ่ม (เช่น ล่องแพ): คิดตามจำนวนผู้ใหญ่ + เด็ก ทารกไม่นับ
+  const tiers = parsePriceTiers(activity.group_pricing);
+  if (tiers.length) return Math.round(groupPrice(tiers, adults + children) * 100) / 100;
+
   const total =
     adults * Number(activity.adult_price) +
     children * Number(activity.child_price) +
@@ -114,6 +118,12 @@ export async function createBooking(input, customer = null) {
     // MySQL และ PostgreSQL รองรับ SELECT ... FOR UPDATE เหมือนกัน
     const activity = await activityQuery.forUpdate().first();
     if (!activity) throw ApiError.notFound('ไม่พบกิจกรรมที่เลือก หรือกิจกรรมนี้ปิดรับจองอยู่');
+
+    if (toBoolean(activity.adults_only) && input.children + input.infants > 0) {
+      throw ApiError.unprocessable('กิจกรรมนี้รับเฉพาะผู้ใหญ่ ไม่สามารถจองสำหรับเด็กหรือทารกได้', [
+        { field: 'children', message: 'กิจกรรมนี้รับเฉพาะผู้ใหญ่' },
+      ]);
+    }
 
     const seats = input.adults + input.children;
     const booked = await countBookedSeats(activity.id, input.booking_date, trx);
@@ -296,7 +306,7 @@ export async function markPaid(bookingId, { method, paymentRef }) {
   });
 }
 
-/** ตัวกรองรายการจองของหลังบ้าน ใช้ร่วมกันทั้งหน้ารายการและการส่งออก Excel */
+/** ตัวกรองของหน้ารายการจองหลังบ้าน ใช้ร่วมกันระหว่างรายการแบบแบ่งหน้าและไฟล์ส่งออก */
 const bookingFilters =
   ({ status, payment_status, activity_id, date_from, date_to, q }) =>
   (query) => {
@@ -337,11 +347,23 @@ export async function listBookings(filters) {
   };
 }
 
-/** รายการจองทั้งหมดที่ตรงตัวกรอง (ไม่แบ่งหน้า) สำหรับส่งออกเป็นไฟล์ — จำกัดจำนวนแถวกันไฟล์ใหญ่เกิน */
-export async function listBookingsForExport(filters, { maxRows = 20000 } = {}) {
+// กันไฟล์ส่งออกใหญ่จนกินหน่วยความจำของ API — ถ้าเกินให้แอดมินกรองช่วงวันที่ให้แคบลง
+export const EXPORT_MAX_ROWS = 20000;
+
+/** ทุกการจองที่ตรงตัวกรอง เรียงตามวันที่เข้าร่วมกิจกรรม สำหรับส่งออกเป็นไฟล์ */
+export async function listBookingsForExport(filters) {
   const rows = await bookingFilters(filters)(withActivity(db('bookings')))
-    .orderBy('bookings.created_at', 'desc')
-    .limit(maxRows);
+    .orderBy([
+      { column: 'bookings.booking_date', order: 'asc' },
+      { column: 'bookings.id', order: 'asc' },
+    ])
+    .limit(EXPORT_MAX_ROWS + 1);
+
+  if (rows.length > EXPORT_MAX_ROWS) {
+    throw ApiError.unprocessable(
+      `มีรายการเกิน ${EXPORT_MAX_ROWS} แถว กรุณากรองช่วงวันที่ให้แคบลงก่อนส่งออก`,
+    );
+  }
   return rows.map(serializeBooking);
 }
 

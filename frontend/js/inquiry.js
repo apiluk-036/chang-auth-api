@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import { loadSettings, renderAuthNav } from './common.js';
+import { lang, t } from './i18n.js';
 
 /* ============================================================
    หน้าแรก — ฟอร์ม Send us Your Question → POST /api/inquiries
@@ -29,17 +30,18 @@ function initInquiryForm() {
     const message = messageInput.value.trim();
 
     if (!contact || !message) {
-      setStatus('กรุณากรอกช่องทางติดต่อและคำถามให้ครบ', false);
+      setStatus(t('Please enter your contact details and your question.', 'กรุณากรอกช่องทางติดต่อและคำถามให้ครบ'), false);
       return;
     }
 
     submit.disabled = true;
     submit.classList.add('opacity-60');
-    setStatus('กำลังส่ง...', true);
+    setStatus(t('Sending...', 'กำลังส่ง...'), true);
 
     try {
       const result = await api.sendInquiry({ contact, message });
-      setStatus(result.message, true);
+      // ข้อความตอบรับจาก API เป็นภาษาไทย
+      setStatus(t('Thank you! We have received your question and will reply within 24 hours.', result.message), true);
       contactInput.value = '';
       messageInput.value = '';
     } catch (error) {
@@ -57,7 +59,8 @@ async function applySettings() {
   const settings = await loadSettings();
   for (const element of document.querySelectorAll('[data-setting]')) {
     const value = settings[element.dataset.setting];
-    if (value !== undefined && value !== '') element.textContent = value;
+    // หน้าอังกฤษตัดหน่วยเวลา "น." ที่แอดมินพิมพ์เป็นไทยออก
+    if (value !== undefined && value !== '') element.textContent = lang === 'th' ? value : String(value).replace(/\s*น\.\s*$/, '');
   }
 }
 
