@@ -1,220 +1,529 @@
-# chang-auth-api
+# Chokchai Elephant Camp — Website + Backend
 
-Register / login ด้วย Express + MySQL + JWT พร้อมหน้า login / register
+ระบบเว็บไซต์และระบบจองกิจกรรมของปางช้างโชคชัย ประกอบด้วยเว็บหน้าบ้าน (Tailwind CSS + JavaScript),
+REST API (Node.js + Express), ฐานข้อมูล PostgreSQL และระบบหลังบ้านสำหรับจัดการการจอง
+ทุกส่วนรันด้วย Docker Compose คำสั่งเดียว
 
-## วิธีรัน
+**สิ่งที่ระบบทำได้**
+
+| ฝั่งลูกค้า | ฝั่งหลังบ้าน |
+| --- | --- |
+| ดูกิจกรรม ค้นหา กรองหมวดหมู่ เรียงตามราคา | เข้าสู่ระบบแบบแยกสิทธิ์ (ผู้ดูแลระบบ / พนักงาน) |
+| หน้ารายละเอียดกิจกรรม + เช็กที่ว่างตามวันที่ | จัดการการจอง: ยืนยัน เสร็จสิ้น ยกเลิก บันทึกรับเงิน / คืนเงิน |
+| จอง 4 ขั้นตอน เลือกรอบรับเช้า/กลางวัน (จองได้ทั้งแบบสมาชิกและไม่ล็อกอิน) | เพิ่ม / แก้ไข / ปิด / ลบกิจกรรม และกำหนดโควตาต่อวัน |
+| สมัครสมาชิก เข้าสู่ระบบ แก้โปรไฟล์ เปลี่ยนรหัสผ่าน | จัดการบัญชีลูกค้าและบัญชีทีมงาน |
+| ประวัติการจอง ยกเลิกการจองเองตามนโยบาย | รายงานยอดจองรายวัน / รายกิจกรรม + ดาวน์โหลด CSV |
+| ชำระเงินออนไลน์ (PromptPay QR, Stripe หรือโหมดจำลอง) | ตั้งค่าระบบ: เวลาทำการ กติกาการจอง แถบประกาศ |
+| อีเมลยืนยัน + การแจ้งเตือนในหน้าบัญชี | บันทึกอีเมลทุกฉบับที่ระบบส่ง ตอบคำถาม อนุมัติรีวิว |
+
+---
+
+## สถาปัตยกรรม
+
+```
+                    http://localhost:8080
+                             │
+                   ┌─────────▼─────────┐
+                   │   web (nginx)     │   เสิร์ฟไฟล์ static + proxy /api
+                   └─────────┬─────────┘
+                             │  /api/*
+                   ┌─────────▼─────────┐        ┌──────────────────────┐
+                   │   api (Node.js)   │──SMTP─►│  mailpit             │  กล่องจดหมายทดสอบ
+                   └─────────┬─────────┘        └──────────────────────┘  http://localhost:8025
+                             │               Express + Knex + JWT  http://localhost:3000
+                   ┌─────────▼─────────┐
+                   │    postgres       │   localhost:5432 (เชื่อมจาก DBeaver)
+                   └───────────────────┘
+```
+
+| ส่วน | เทคโนโลยี | พอร์ต |
+| --- | --- | --- |
+| Frontend | HTML + Tailwind CSS (build เป็นไฟล์ `css/app.css`) + JavaScript (ES Modules) | 8080 |
+| API | Node.js 22, Express 4, Knex 3, JWT, Zod, Nodemailer | 3000 |
+| อีเมล (dev) | Mailpit — ดักอีเมลทุกฉบับไว้ให้เปิดดู ไม่ส่งออกจริง | 8025 |
+| Database | PostgreSQL 16 (รองรับ MySQL 8.4 ด้วย) | 5432 |
+| Reverse proxy | nginx alpine | 8080 |
+
+---
+
+## เริ่มใช้งาน
+
+**สิ่งที่ต้องมี:** Docker Desktop (เปิดไว้), Node.js 20+ (เฉพาะตอนพัฒนานอก Docker)
 
 ```bash
+# 1. ตั้งค่า environment
+copy .env.example .env
+
+# 2. สร้าง JWT_SECRET แบบสุ่มแล้วนำไปใส่ใน .env
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+
+# 3. รันทั้งระบบ
+docker compose up -d --build
+```
+
+รอประมาณ 30 วินาที ระบบจะสร้างตาราง (migration) และใส่ข้อมูลตั้งต้น (seed) ให้อัตโนมัติ จากนั้นเปิด:
+
+| หน้า | URL |
+| --- | --- |
+| เว็บไซต์ | http://localhost:8080 |
+| หน้าจองกิจกรรม (ค้นหา / กรอง) | http://localhost:8080/activities.html |
+| สมัครสมาชิก / เข้าสู่ระบบ | http://localhost:8080/register.html · http://localhost:8080/login.html |
+| บัญชีของฉัน (ประวัติการจอง / แจ้งเตือน / โปรไฟล์) | http://localhost:8080/account.html |
+| ตรวจสอบการจองด้วยรหัส + อีเมล | http://localhost:8080/booking.html |
+| ระบบหลังบ้าน | http://localhost:8080/admin.html |
+| กล่องอีเมลทดสอบ (Mailpit) | http://localhost:8025 |
+| รายการ API ทั้งหมด | http://localhost:3000/api |
+
+**บัญชีแอดมินเริ่มต้น:** `admin@chokchai.local` / `Admin@1234` — เปลี่ยนค่าใน `.env` ก่อนใช้งานจริง
+
+ตรวจว่าทุกอย่างทำงานจริงด้วยคำสั่งเดียว
+
+```powershell
+.\scripts\smoke-test.ps1
+```
+
+ยิงคำขอจริง 45 รายการไล่ตั้งแต่หน้าเว็บ → API → สมาชิก → ชำระเงิน → อีเมล → ระบบหลังบ้าน แล้วสรุปผ่าน/ไม่ผ่าน
+วิธีตรวจแบบละเอียดและคำอธิบายว่าข้อมูลเก็บที่ไหน อยู่ใน [docs/VERIFY.md](docs/VERIFY.md)
+
+> เปิดโปรเจกต์ใน VS Code แล้วกด `Terminal → Run Task...` จะมีคำสั่งที่ใช้บ่อยให้เลือกกดได้เลย
+> และเปิด [docs/api-playground.http](docs/api-playground.http) เพื่อยิง API ทดสอบทีละอัน
+> (ต้องมี extension REST Client)
+
+### คำสั่งที่ใช้บ่อย
+
+```bash
+docker compose ps                  # ดูสถานะ container
+docker compose logs -f api         # ดู log ของ API แบบ real-time
+docker compose restart api         # รีสตาร์ท API หลังแก้โค้ด backend
+docker compose down                # หยุดทั้งหมด (ข้อมูลยังอยู่)
+docker compose down -v             # หยุดและลบข้อมูลในฐานข้อมูลทิ้ง
+```
+
+ไฟล์ใน `frontend/` ถูก mount เข้า container โดยตรง แก้แล้วกด refresh เห็นผลทันที ไม่ต้อง rebuild container
+(ยกเว้นเมื่อใช้ class ของ Tailwind ตัวใหม่ ต้อง build CSS ใหม่ — ดูหัวข้อ [Tailwind CSS](#tailwind-css))
+
+---
+
+## เชื่อมต่อฐานข้อมูลด้วย DBeaver
+
+สร้าง connection ใหม่ → เลือก **PostgreSQL** → กรอกตามนี้
+
+| ช่อง | ค่า |
+| --- | --- |
+| Host | `localhost` |
+| Port | `5432` |
+| Database | `chokchai` |
+| Username | `chokchai` |
+| Password | `chokchai` |
+
+กด **Test Connection** (ครั้งแรก DBeaver จะขอดาวน์โหลด driver ให้กด Download) แล้วกด Finish
+
+ตารางทั้งหมดอยู่ใต้ `chokchai` → `Schemas` → `public` → `Tables`
+รายละเอียดเพิ่มเติมและวิธีแก้ปัญหาที่พบบ่อยอยู่ใน [docs/DBEAVER.md](docs/DBEAVER.md)
+
+---
+
+## โครงสร้างฐานข้อมูล
+
+| ตาราง | เก็บอะไร |
+| --- | --- |
+| `activities` | 6 เซ็ทกิจกรรม ราคาผู้ใหญ่/เด็ก/ทารก ระยะเวลา และโควตาต่อวัน |
+| `bookings` | การจองจาก Booking Modal 4 ขั้นตอน พร้อมรหัสอ้างอิงและสถานะ |
+| `reviews` | รีวิวจาก Google / TripAdvisor / หน้าเว็บ (ต้องอนุมัติก่อนแสดง) |
+| `faqs` | คำถามที่พบบ่อยในหน้า Contact |
+| `inquiries` | คำถามที่ส่งผ่านฟอร์ม "Send us Your Question" |
+| `admin_users` | บัญชีทีมงาน role `admin` / `staff` (รหัสผ่านเก็บเป็น bcrypt hash) |
+| `users` | บัญชีลูกค้าที่สมัครสมาชิก |
+| `settings` | ค่าตั้งระบบแบบ key-value ที่แก้ได้จากหน้าหลังบ้าน |
+| `notifications` | การแจ้งเตือนทุกฉบับ พร้อมสถานะการส่งอีเมล |
+| `payment_slips` | รูปสลิปโอนเงินที่ลูกค้าแนบ (การจองละ 1 ใบ) |
+
+**จุดที่ออกแบบไว้เป็นพิเศษ**
+
+- `bookings` เก็บ `unit_adult_price` / `unit_child_price` ไว้ด้วย เป็นราคา ณ เวลาที่จอง
+  ทำให้ยอดเงินของการจองเดิมไม่เปลี่ยนเมื่อแอดมินแก้ราคากิจกรรมภายหลัง
+- ยอดเงินคำนวณที่ฝั่งเซิร์ฟเวอร์เสมอ ไม่ได้รับราคาจากเบราว์เซอร์ ป้องกันการแก้ราคาผ่าน DevTools
+- การสร้างการจองทำใน transaction เดียวและล็อกแถวกิจกรรมด้วย `SELECT ... FOR UPDATE`
+  กันกรณีคนจองพร้อมกันหลายคนแล้วยอดเกินโควตาต่อวัน
+- ทารกไม่นับเข้าโควตาที่นั่ง แต่ต้องมีผู้ใหญ่มาด้วยอย่างน้อย 1 คน
+- `bookings.user_id` เป็น null ได้ เพราะจองแบบไม่ล็อกอินก็ได้ — เมื่อลูกค้าสมัครสมาชิกภายหลังด้วยอีเมลเดิม
+  การจองเก่าจะถูกรวมเข้าบัญชีให้อัตโนมัติ
+- กติกาการจอง (จองล่วงหน้ากี่วัน, สูงสุดกี่คน, ยกเลิกได้ก่อนกี่ชั่วโมง) อ่านจากตาราง `settings`
+  ถ้าไม่เคยตั้งจะใช้ค่าจาก `.env`
+
+ดู ER diagram และคำอธิบายทุกคอลัมน์ได้ที่ [docs/ERD.md](docs/ERD.md)
+
+---
+
+## REST API
+
+เอกสารฉบับเต็มพร้อมตัวอย่าง request/response อยู่ที่ [docs/API.md](docs/API.md) สรุปย่อ:
+
+**สาธารณะ** — ไม่ต้อง login
+
+```
+GET    /api/health                                  ตรวจสถานะระบบ
+GET    /api/settings                                เวลาทำการ ช่องทางติดต่อ กติกาการจอง
+GET    /api/activities?q=&category=&max_price=&sort=  รายการกิจกรรม (ค้นหา / กรอง / เรียง)
+GET    /api/activities/:slug                        รายละเอียดกิจกรรม
+GET    /api/activities/:slug/availability?date=...  ที่ว่างของวันนั้น
+POST   /api/bookings                                สร้างการจอง (แนบ token สมาชิกได้)
+GET    /api/bookings/:ref?email=...                 ค้นหาการจองของตัวเอง
+POST   /api/bookings/:ref/cancel                    ยกเลิกการจอง (ยืนยันด้วยอีเมล)
+POST   /api/bookings/:ref/pay                       ขอลิงก์ชำระเงิน
+GET    /api/payments/status?ref=&token=             สถานะการชำระเงิน
+POST   /api/payments/promptpay/notify               ลูกค้าแจ้งว่าโอนผ่าน PromptPay แล้ว
+POST   /api/payments/mock/confirm                   ยืนยันการชำระจำลอง (เฉพาะโหมด mock)
+POST   /api/payments/stripe/webhook                 Stripe แจ้งผลการชำระเงิน
+GET    /api/reviews                                 รีวิวที่เผยแพร่แล้ว
+POST   /api/reviews                                 ส่งรีวิว (รออนุมัติ)
+GET    /api/faqs                                    คำถามที่พบบ่อย
+POST   /api/inquiries                               ส่งคำถามถึงทีมงาน
+```
+
+**สมาชิก** — ต้องมี header `Authorization: Bearer <token ของลูกค้า>`
+
+```
+POST   /api/account/register                        สมัครสมาชิก รับ token
+POST   /api/account/login                           เข้าสู่ระบบ รับ token
+GET    /api/account/me                              ข้อมูลโปรไฟล์
+PATCH  /api/account/me                              แก้ไขโปรไฟล์
+POST   /api/account/password                        เปลี่ยนรหัสผ่าน
+GET    /api/account/bookings                        ประวัติการจอง
+GET    /api/account/bookings/:ref                   รายละเอียดการจอง
+POST   /api/account/bookings/:ref/cancel            ยกเลิกการจอง
+POST   /api/account/bookings/:ref/pay               ขอลิงก์ชำระเงิน
+GET    /api/account/notifications                   การแจ้งเตือน
+POST   /api/account/notifications/read              ทำเครื่องหมายว่าอ่านแล้วทั้งหมด
+```
+
+**แอดมิน** — ต้องมี header `Authorization: Bearer <token ของทีมงาน>`
+
+```
+POST   /api/auth/login                              เข้าสู่ระบบ รับ token
+GET    /api/auth/me                                 ข้อมูลผู้ใช้ปัจจุบัน
+GET    /api/admin/stats                             ตัวเลขสรุปสำหรับ dashboard
+GET    /api/admin/reports?from=&to=                 รายงานยอดจองรายวัน / รายกิจกรรม
+GET    /api/admin/bookings                          รายการจอง (กรอง/ค้นหา/แบ่งหน้า)
+GET    /api/admin/bookings/:id/slip                 รูปสลิปโอนเงินของการจอง
+PATCH  /api/admin/bookings/:id                      เปลี่ยนสถานะ / บันทึกรับเงิน / คืนเงิน
+GET    /api/admin/activities                        รายการกิจกรรม (รวมที่ปิดอยู่)
+POST   /api/admin/activities                        เพิ่มกิจกรรม
+PATCH  /api/admin/activities/:id                    แก้ไขกิจกรรม
+DELETE /api/admin/activities/:id                    ลบกิจกรรม (เฉพาะ role admin)
+GET    /api/admin/reviews                           รีวิวทั้งหมด
+PATCH  /api/admin/reviews/:id                       อนุมัติ / ซ่อนรีวิว
+GET    /api/admin/inquiries                         คำถามจากลูกค้า
+PATCH  /api/admin/inquiries/:id                     บันทึกคำตอบ / ปิดเรื่อง
+GET    /api/admin/users                             รายชื่อลูกค้า
+PATCH  /api/admin/users/:id                         ระงับ / เปิดใช้บัญชีลูกค้า
+GET    /api/admin/staff                             รายชื่อทีมงาน (เฉพาะ role admin)
+POST   /api/admin/staff                             เพิ่มทีมงาน (เฉพาะ role admin)
+PATCH  /api/admin/staff/:id                         แก้ไขทีมงาน (เฉพาะ role admin)
+GET    /api/admin/settings                          ค่าตั้งระบบ
+PUT    /api/admin/settings                          บันทึกค่าตั้งระบบ (เฉพาะ role admin)
+GET    /api/admin/notifications                     บันทึกอีเมลที่ระบบส่ง
+```
+
+สถานะการจองเปลี่ยนได้ตามลำดับนี้เท่านั้น — ข้ามขั้นจะได้ HTTP 409
+
+```
+pending ──► confirmed ──► completed
+   │            │
+   └────────────┴──────► cancelled
+```
+
+ลูกค้ายกเลิกเองได้เฉพาะการจองที่ยัง `pending` หรือ `confirmed` และต้องก่อนวันกิจกรรมอย่างน้อย
+72 ชั่วโมง (ปรับได้ในหน้าตั้งค่าระบบ) หลังจากนั้นต้องติดต่อเจ้าหน้าที่ ซึ่งยกเลิกให้ได้จากหน้าหลังบ้าน
+
+---
+
+## การชำระเงิน
+
+เลือกวิธีชำระเงินได้ที่หน้าหลังบ้าน → **ตั้งค่าระบบ** → **การชำระเงิน** มีผลทันทีโดยไม่ต้องรีสตาร์ท
+(ค่าเริ่มต้นก่อนตั้งครั้งแรกมาจาก `PAYMENT_PROVIDER` ในไฟล์ `.env`)
+
+| วิธี | พฤติกรรม |
+| --- | --- |
+| **PromptPay QR** | ลูกค้าสแกน QR ด้วยแอปธนาคารแล้วโอนเข้าบัญชีพร้อมเพย์ของร้าน **เป็นการรับเงินจริง** ไม่ต้องสมัครบริการรับชำระใด ๆ |
+| Stripe | พาลูกค้าไปหน้า Stripe Checkout (บัตรเครดิต/เดบิต) แล้ว Stripe แจ้งผลกลับมาทาง webhook |
+| ชำระจำลอง (`mock`) | กดปุ่มแล้วถือว่าจ่ายสำเร็จ **ไม่มีการรับเงินจริง** ใช้สำหรับพัฒนาและเดโมเท่านั้น |
+| ปิด (`none`) | การจองค้างเป็น "ยังไม่ชำระ" ให้ทีมงานติดต่อกลับแล้วกด **บันทึกรับเงิน** ในหน้าหลังบ้าน |
+
+**เปิดรับเงินจริงด้วย PromptPay**
+
+1. หน้าหลังบ้าน → ตั้งค่าระบบ → เลือกวิธีชำระเงินเป็น **PromptPay QR**
+2. กรอก **หมายเลขพร้อมเพย์ของร้าน** (เบอร์มือถือ 10 หลัก หรือเลขประจำตัว 13 หลัก) และ **ชื่อบัญชี** แล้วกดบันทึก
+3. ทดลองจอง 1 รายการ แล้วสแกน QR ด้วยแอปธนาคาร — **ตรวจว่าชื่อผู้รับที่แอปแสดงเป็นบัญชีของร้านจริง** ก่อนเปิดให้ลูกค้าใช้
+
+ขั้นตอนของลูกค้าและทีมงาน
+
+```
+ลูกค้าจอง → หน้า QR (ยอดเงินฝังอยู่ใน QR แก้ไม่ได้) → โอนในแอปธนาคาร → แนบสลิป → กด "แจ้งโอนเงินแล้ว"
+        → สถานะ "แจ้งโอนแล้ว รอตรวจสอบ" + แท็บการจองในหลังบ้านขึ้นตัวเลขแจ้งเตือน
+ทีมงานกด "ดูสลิป" เทียบกับยอดเข้าบัญชี → กด "ยืนยันรับเงิน" → การจองเป็น "ชำระแล้ว" + "ยืนยันแล้ว" และลูกค้าได้อีเมล
+```
+
+> ระบบ**ตรวจยอดเงินเข้าบัญชีธนาคารเองไม่ได้** (ต้องใช้บริการของธนาคารหรือ payment gateway) การกด "แจ้งโอนเงินแล้ว"
+> ของลูกค้าจึงยังไม่ถือว่าได้รับเงิน — ทีมงานต้องเช็กยอดในแอปธนาคารก่อนกดยืนยันทุกครั้ง
+> ถ้าต้องการให้ยืนยันอัตโนมัติ ให้ใช้ Stripe
+>
+> สลิปที่ลูกค้าแนบถูกย่อเป็น JPEG ที่เบราว์เซอร์ก่อนส่ง (ด้านยาวไม่เกิน 1600 px) แล้วเก็บในตาราง `payment_slips`
+> ของฐานข้อมูล เปิดดูได้เฉพาะทีมงานที่ล็อกอินหลังบ้าน **สลิปปลอมแปลงได้ จึงใช้ประกอบการตรวจเท่านั้น ไม่ใช่หลักฐานว่าเงินเข้าแล้ว**
+
+เมื่อบันทึกรับเงิน ระบบจะตั้ง `payment_status = paid` บันทึกเวลา ยืนยันการจองให้ (`pending → confirmed`) และส่งอีเมลแจ้งลูกค้า
+
+**เปิดใช้ Stripe**
+
+1. ใส่ค่าใน `.env` แล้ว `docker compose up -d` จากนั้นเลือก **Stripe** ในหน้าตั้งค่าระบบ
+   ```
+   STRIPE_SECRET_KEY=sk_live_...        # หรือ sk_test_... ตอนทดสอบ
+   APP_URL=https://โดเมนของคุณ
+   ```
+2. ใน Stripe Dashboard → Developers → Webhooks เพิ่ม endpoint
+   `https://โดเมนของคุณ/api/payments/stripe/webhook` เลือก event `checkout.session.completed`
+3. คัดลอก Signing secret (`whsec_...`) มาใส่ `STRIPE_WEBHOOK_SECRET` แล้ว `docker compose up -d`
+
+ระบบตรวจลายเซ็นของ webhook ทุกครั้ง และ webhook ที่ยิงซ้ำจะไม่ทำให้บันทึกรับเงินหรือส่งอีเมลซ้ำ
+
+> ส่วนเชื่อม Stripe ถูกทดสอบแล้วในระดับโค้ด (การตรวจลายเซ็นและการบันทึกรับเงิน) แต่ยังไม่ได้ยิงกับบัญชี Stripe จริง
+> เพราะต้องใช้คีย์ของร้าน — ก่อนเปิดรับเงินจริงให้ทดสอบด้วยคีย์ `sk_test_` และบัตรทดสอบ `4242 4242 4242 4242` หนึ่งรอบ
+>
+> ถ้าการจองที่จ่ายแล้วถูกยกเลิก ระบบ**ไม่**คืนเงินอัตโนมัติ — ทีมงานคืนเงินผ่าน Stripe Dashboard
+> แล้วกด **บันทึกคืนเงินแล้ว** ในหน้าหลังบ้าน
+
+---
+
+## อีเมลและการแจ้งเตือน
+
+ระบบส่งอีเมลให้ลูกค้าเมื่อ: สมัครสมาชิก, จองสำเร็จ, ชำระเงินสำเร็จ, ทีมงานยืนยัน / ปิดงาน / ยกเลิกการจอง
+และลูกค้ายกเลิกเอง ทุกฉบับถูกบันทึกในตาราง `notifications` — ลูกค้าเห็นในแท็บ "การแจ้งเตือน" ของหน้าบัญชี
+ส่วนทีมงานดูสถานะการส่งได้ในแท็บ "การแจ้งเตือน" ของหน้าหลังบ้าน
+
+ถ้าต้องการให้ทีมงานได้รับอีเมลเมื่อมีการจองใหม่หรือลูกค้ายกเลิก ให้ใส่อีเมลในหน้า **ตั้งค่าระบบ**
+
+| สภาพแวดล้อม | ตั้งค่า | ผล |
+| --- | --- | --- |
+| Docker (ค่าเริ่มต้น) | `SMTP_HOST=mailpit` | อีเมลทุกฉบับเข้า Mailpit เปิดดูที่ http://localhost:8025 **ไม่ถูกส่งออกไปหาลูกค้าจริง** |
+| ใช้งานจริง | ใส่ SMTP ของผู้ให้บริการ | ส่งถึงลูกค้าจริง |
+| ไม่ตั้ง `SMTP_HOST` | — | ไม่ส่งอีเมล แต่ยังบันทึกการแจ้งเตือนไว้ (สถานะ `logged`) |
+
+ตัวอย่างค่า `.env` สำหรับ SendGrid (ผู้ให้บริการอื่นใช้รูปแบบเดียวกัน)
+
+```
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=<API key>
+MAIL_FROM=Chokchai Elephant Camp <booking@โดเมนของคุณ>
+```
+
+อีเมลส่งแบบเบื้องหลัง ถ้า SMTP ล่ม การจองยังสำเร็จตามปกติและแถวใน `notifications` จะมีสถานะ `failed` พร้อมสาเหตุ
+
+---
+
+## Tailwind CSS
+
+หน้าเว็บใช้ไฟล์ CSS ที่ build แล้ว ([frontend/css/app.css](frontend/css/app.css), ประมาณ 22 KB) แทนการโหลด Tailwind จาก CDN
+ไฟล์นี้ commit ไว้ใน repo แล้ว จึงรันเว็บได้เลยโดยไม่ต้องมี Node
+
+ต้อง build ใหม่เฉพาะเมื่อแก้ HTML / JS แล้วใช้ class ของ Tailwind ที่ไม่เคยใช้มาก่อน
+
+```bash
+cd frontend
+npm install        # ครั้งแรกครั้งเดียว
+npm run build      # สร้าง css/app.css ใหม่
+npm run dev        # หรือเปิดค้างไว้ให้ build เองทุกครั้งที่บันทึกไฟล์
+```
+
+สีและฟอนต์ของแบรนด์กำหนดไว้ที่ [frontend/tailwind.config.js](frontend/tailwind.config.js)
+
+---
+
+## HTTPS (ขึ้นใช้งานจริง)
+
+ไฟล์ [docker-compose.https.yml](docker-compose.https.yml) เปลี่ยน nginx ไปใช้ [infra/nginx/https.conf](infra/nginx/https.conf)
+ซึ่งเปิดพอร์ต 443, redirect HTTP → HTTPS และส่ง header `Strict-Transport-Security`
+
+1. วาง certificate ของโดเมนไว้ที่ `infra/certs/fullchain.pem` และ `infra/certs/privkey.pem`
+   (ชื่อไฟล์เดียวกับที่ Let's Encrypt / certbot สร้างให้ โฟลเดอร์นี้ไม่ถูก commit)
+2. แก้ `.env`
+   ```
+   APP_URL=https://โดเมนของคุณ
+   CORS_ORIGINS=https://โดเมนของคุณ
+   JWT_SECRET=<ค่าสุ่มใหม่>
+   SEED_ADMIN_PASSWORD=<รหัสผ่านใหม่>
+   DB_PASSWORD=<รหัสผ่านใหม่>
+   ```
+3. รันพร้อมไฟล์เสริม
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+   ```
+
+API ใน container รันด้วย `NODE_ENV=production` อยู่แล้ว (ไม่เปิดเผย stack trace และบังคับให้ต้องมี `JWT_SECRET`)
+
+**ทดลองในเครื่องด้วย certificate แบบ self-signed**
+
+```powershell
+docker run --rm -v "${PWD}/infra/certs:/certs" alpine/openssl req -x509 -newkey rsa:2048 -nodes -days 365 `
+  -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" `
+  -keyout /certs/privkey.pem -out /certs/fullchain.pem
+
+$env:HTTP_PORT = 8088; $env:HTTPS_PORT = 8443; $env:APP_URL = 'https://localhost:8443'
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d
+```
+
+แล้วเปิด https://localhost:8443 (เบราว์เซอร์จะเตือนเพราะ certificate ออกเอง กดดำเนินการต่อได้)
+กลับไปใช้ HTTP ปกติด้วย `docker compose up -d` ในหน้าต่าง terminal ใหม่
+
+---
+
+## พัฒนาแบบไม่ผ่าน Docker
+
+รัน API บนเครื่องโดยตรง (โหลดใหม่อัตโนมัติเมื่อแก้โค้ด) แต่ยังใช้ฐานข้อมูลใน Docker
+
+```bash
+docker compose up -d postgres      # เปิดเฉพาะฐานข้อมูล
+
+cd backend
+copy .env.example .env
 npm install
-cp .env.example .env          # ใส่ DATABASE_URL และ JWT_SECRET (อย่างน้อย 32 ตัวอักษร)
-npm run db:up                 # (ถ้าไม่มี MySQL) เปิด MySQL ใน Docker: สร้าง chang_db และ chang_test ให้
-npm start                     # สร้าง/อัปเดตตารางให้อัตโนมัติ (migration) แล้วเปิด server
-npm run make-admin -- you@example.com   # ตั้ง admin คนแรก (ต้องสมัครสมาชิกก่อน)
+npm run db:migrate                 # สร้างตาราง
+npm run db:seed                    # ใส่ข้อมูลตั้งต้น
+npm run dev                        # API ที่ http://localhost:3000
 ```
 
-เปิด http://localhost:4000/login
+เปิด `frontend/index.html` ด้วย Live Server (พอร์ต 5500) ได้เลย — `js/api.js` ตรวจพอร์ตแล้วชี้ไปที่
+`http://localhost:3000` ให้เอง และ `CORS_ORIGINS` ใน `.env` อนุญาตพอร์ต 5500 ไว้แล้ว
 
-- `npm run dev`: รันแบบ restart อัตโนมัติ และแสดง log แบบอ่านง่าย
-- ถ้ายังไม่ได้ตั้ง `SMTP_URL` อีเมล (ยืนยันอีเมล / ลืมรหัสผ่าน) จะไม่ถูกส่งจริง แต่พิมพ์ลิงก์ไว้ใน log แทน
-
-## โครงสร้าง
-
-```
-server.js                     รัน migration แล้วเปิด server
-app.js                        Express app (เทสต์โหลดไฟล์นี้ตรงๆ)
-config/db.js                  MySQL pool (mysql2)
-config/jwt.js                 JWT_SECRET (ไม่มีหรือสั้นเกินไป server จะไม่ start)
-config/logger.js              log แบบ JSON (pino)
-config/mailer.js              ส่งอีเมลผ่าน SMTP (nodemailer), APP_URL
-controllers/authController.js register / login / me / logout / เปลี่ยนรหัส / ลืมรหัส / ยืนยันอีเมล
-controllers/adminController.js ดูรายชื่อผู้ใช้ / เปลี่ยน role
-routes/authRoutes.js          /api/auth/*
-routes/adminRoutes.js         /api/admin/* (admin เท่านั้น)
-middleware/authMiddleware.js  ตรวจ Bearer token + token_version, requireRole(...), requireVerifiedEmail
-middleware/rateLimiters.js    rate limit ต่อ IP และต่ออีเมล
-services/tokenService.js      JWT, ยกเลิก token, token ในลิงก์อีเมล (ใช้ครั้งเดียว)
-services/emailService.js      เนื้อหาอีเมลยืนยัน / ตั้งรหัสใหม่
-migrations/                   001_create_users.sql, 002_auth_features.sql
-scripts/migrate.js            npm run migrate
-scripts/make-admin.js         npm run make-admin -- <email>
-test/                         เทสต์อัตโนมัติ (รันกับ MySQL จริง)
-docker-compose.yml            MySQL สำหรับ dev และเทสต์
-public/                       login, register, index, forgot-password, reset-password, verify-email, admin (.html) + css/, js/
-deploy/Caddyfile              ตัวอย่าง HTTPS ด้วย Caddy (ขอ certificate ให้อัตโนมัติ)
-deploy/nginx.conf             ตัวอย่าง HTTPS ด้วย Nginx + certbot
-```
-
-## API
-
-| Method | Path | ผลลัพธ์ |
-|---|---|---|
-| POST | /api/auth/register | 201 สำเร็จ (ได้ token + ส่งอีเมลยืนยัน) · 400 ข้อมูลไม่ถูก · 409 มี email แล้ว (`redirectTo: '/login'`) |
-| POST | /api/auth/login | 200 สำเร็จ · 404 ไม่มี email (`accountExists: false, redirectTo: '/register'`) · 401 รหัสผิด · 429 ผิดเกิน 5 ครั้ง |
-| GET | /api/auth/me | 200 ข้อมูลผู้ใช้ (มี `emailVerified`) · 401 ไม่มี/หมดอายุ/ถูกยกเลิก token |
-| POST | /api/auth/logout | 200 ยกเลิก token ทุกอันของผู้ใช้ (ออกจากระบบทุกอุปกรณ์) |
-| POST | /api/auth/change-password | body `{ currentPassword, newPassword }` · 200 ได้ token ใหม่ (อุปกรณ์อื่นหลุด) · 401 รหัสเดิมผิด |
-| POST | /api/auth/forgot-password | body `{ email }` · 200 เสมอ (ไม่บอกว่ามีบัญชีหรือไม่) · 429 ขอเกิน 3 ครั้ง/ชม. |
-| POST | /api/auth/reset-password | body `{ token, password }` · 200 สำเร็จ · 400 ลิงก์ผิด/ใช้แล้ว/หมดอายุ |
-| POST | /api/auth/verify-email | body `{ token }` · 200 สำเร็จ · 400 ลิงก์ผิด/ใช้แล้ว/หมดอายุ |
-| POST | /api/auth/resend-verification | ต้องมี token · 200 ส่งแล้ว · 400 ยืนยันแล้ว · 429 เกิน 3 ครั้ง/ชม. |
-| GET | /api/admin/users?q=&page= | admin เท่านั้น · รายชื่อผู้ใช้ (หน้าละ 20) + ค้นหาอีเมล/ชื่อ |
-| PATCH | /api/admin/users/:id/role | admin เท่านั้น · body `{ role }` · 400 role ผิด/เปลี่ยนของตัวเอง · 404 ไม่พบผู้ใช้ |
-
-## การเด้งหน้า
-
-- login ด้วย email ที่ไม่มีในระบบ → `/register?email=...&from=login` (กรอก email ไว้ให้ + แสดงข้อความแจ้ง)
-- register ด้วย email ที่มีอยู่แล้ว → `/login?email=...&exists=1`
-- เข้า `/` โดยไม่มี token → `/login` · token เสีย/หมดอายุ → `/login?expired=1`
-
-## ขึ้น production
-
-1. **HTTPS**: วาง Caddy หรือ Nginx ไว้หน้า Node ใช้ไฟล์ใน `deploy/` เป็นตัวอย่าง (เปลี่ยน `api.example.com` เป็นโดเมนของคุณ)
-2. **`.env`**: ตั้ง `NODE_ENV=production` ค่า default จะเปลี่ยนตามนี้
-   - `TRUST_PROXY=1`: rate limit ใช้ IP จริงของผู้ใช้ ไม่ใช่ IP ของ proxy
-   - `HOST=127.0.0.1`: Node รับ request จาก proxy ในเครื่องเท่านั้น ยิงตรงจากข้างนอกไม่ได้
-   - request ที่เข้ามาแบบ http จะถูก redirect ไป https และเปิด HSTS
-3. **CORS**: ถ้าหน้าเว็บอยู่ใน `public/` ของแอปนี้ ปล่อย `CORS_ORIGIN` ว่างไว้ ถ้ามี frontend แยกโดเมน ให้ใส่โดเมนนั้น (คั่นด้วย `,`)
-4. **helmet**: ใส่ security header ให้อัตโนมัติ CSP อนุญาตให้รัน JavaScript จากไฟล์ของเว็บเองเท่านั้น
-   ห้ามเขียน `<script>...</script>` หรือ `onclick="..."` ลงใน HTML ให้เขียนไว้ใน `public/js/` แทน
-5. **อีเมล**: ต้องตั้ง `APP_URL` (ไม่ตั้ง server จะไม่ start) และ `SMTP_URL` (ไม่ตั้ง อีเมลจะไม่ถูกส่ง และมี error ใน log)
-
-> ถ้าตั้ง `NODE_ENV=production` แต่ไม่มี proxy อยู่หน้า Node หรือ proxy ไม่ส่ง `X-Forwarded-Proto` มา
-> ทุก request จะถูก redirect ไป https วนไม่จบ
-
-## หมายเหตุ
-
-- สมัครใหม่ได้ role `user` เสมอ ส่วน `staff` / `agency` / `admin` ให้ admin เปลี่ยนที่หน้า `/admin`
-  (ใช้ `requireRole('staff')` หลัง `authMiddleware` เพื่อกั้น route ตาม role)
-- ถ้า UI อยู่คนละ origin กับ API ให้แก้ `API_BASE` ใน `public/js/auth.js`
-
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-## ฝั่ง backend (API)
-
-1. สมัครสมาชิก POST /api/auth/register: ตรวจอีเมลและรหัสผ่าน (อย่างน้อย 8 ตัว) และ hash รหัสผ่านด้วย bcrypt ผู้สมัครใหม่ได้ role user เสมอ ถ้าอีเมลมีบัญชีแล้วจะตอบ 409 และบอกให้ไปหน้า login
-2. Login POST /api/auth/login: ถ้าไม่มีอีเมลนี้ในระบบจะตอบ 404 พร้อม redirectTo: '/register' ถ้ารหัสผิดจะตอบ 401 ถ้าถูกจะได้ token อายุ 7 วัน
-3. ดูข้อมูลตัวเอง GET /api/auth/me: ต้องมี token
-4. Middleware: ตรวจ token และมี requireRole(...) ไว้กั้น route ตาม role
-5. จำกัดการลอง register/login ได้ 20 ครั้งต่อ 15 นาทีต่อ IP
-6. ถ้าไม่ตั้ง JWT_SECRET server จะไม่ start
-7. เรียก /api ที่ไม่มีอยู่ จะได้ 404 เป็น JSON
-
-## ความปลอดภัยสำหรับขึ้นจริง (เพิ่มรอบนี้)
-
-1. HTTPS: มีไฟล์ตั้งค่า deploy/Caddyfile และ deploy/nginx.conf พอตั้ง NODE_ENV=production request แบบ http จะถูก redirect ไป https และเปิด HSTS ให้
-2. trust proxy: rate limit นับตาม IP จริงของผู้ใช้ และ Node รับ request จาก proxy ในเครื่องเท่านั้น
-3. CORS: ปิดไว้เป็นค่าเริ่มต้น ถ้ามี frontend แยกโดเมน ให้เปิดผ่าน CORS_ORIGIN
-4. helmet: ใส่ security header ให้ และจำกัดให้รัน JavaScript ได้จากไฟล์ของเว็บเองเท่านั้น
-
-## ฝั่งหน้าเว็บ (ภาษาไทย)
-
-1. /login: ถ้าอีเมลยังไม่มีบัญชี จะเด้งไปหน้า register พร้อมกรอกอีเมลไว้ให้
-2. /register: ถ้าอีเมลมีบัญชีแล้ว จะเด้งไปหน้า login
-3. / หน้าแรก: แสดงข้อมูลผู้ใช้และมีปุ่ม logout ถ้าไม่มี token หรือ token หมดอายุจะเด้งไปหน้า login
-4. โค้ด JavaScript ของทุกหน้าอยู่ในไฟล์แยกใน public/js/ แล้ว
-
-## ไฟล์ทั้งหมด
-
-ดูหัวข้อ "โครงสร้าง" ด้านบน (`sql/users_table.sql` ย้ายไปเป็น `migrations/001_create_users.sql` แล้ว)
-
-
-## สถานะการทดสอบ
-
-1. ทดสอบแล้ว: `npm test` ผ่าน 24 เคส รันกับ MySQL 8.4 ตัวจริง (Docker) ผ่าน express, helmet และ rate limit ตัวจริง
-2. ทดสอบด้วยมือแล้ว: `npm start` บนฐานข้อมูลว่าง (migration สร้างตารางให้), สมัคร, `make-admin`, เรียก `/api/admin/users`, ดู log
-3. ยังไม่ได้ทดสอบ: หน้าเว็บในเบราว์เซอร์ (ผ่านแค่การตรวจ syntax และเช็กว่าทุกหน้าเปิดได้) และการส่งอีเมลผ่าน SMTP จริง
-
-## เพิ่มแล้วรอบนี้ (จากรายการ "ยังไม่ได้เพิ่ม" เดิม)
-
-### 1. ลืมรหัสผ่าน / ตั้งรหัสใหม่
-
-- หน้า `/login` มีลิงก์ "ลืมรหัสผ่าน?" → `/forgot-password` กรอกอีเมล → ได้อีเมลที่มีลิงก์ `/reset-password?token=...`
-- ลิงก์ใช้ได้ **1 ชั่วโมง** และ **ครั้งเดียว** ขอลิงก์ใหม่แล้วลิงก์เก่าใช้ไม่ได้ทันที
-- ในฐานข้อมูลเก็บแค่ SHA-256 ของ token (ตาราง `email_tokens`) ถ้าฐานข้อมูลหลุด ก็เอาไปรีเซ็ตรหัสใครไม่ได้
-- `forgot-password` ตอบข้อความเดียวกันเสมอ ไม่ว่าอีเมลนั้นจะมีบัญชีหรือไม่
-- ตั้งรหัสใหม่สำเร็จ = ทุกอุปกรณ์ที่ login อยู่ถูกออกจากระบบ (ใช้กลไกข้อ 3)
-- ลิงก์ในอีเมลสร้างจาก `APP_URL` ไม่ใช่จาก Host header ของ request (กันคนปลอม Host ให้ลิงก์ชี้ไปเว็บตัวเอง)
-- ไฟล์: `controllers/authController.js` (forgotPassword, resetPassword), `services/tokenService.js`, `services/emailService.js`, `config/mailer.js`, `public/forgot-password.html`, `public/reset-password.html`
-
-### 2. ยืนยันอีเมล
-
-- สมัครเสร็จ ระบบส่งอีเมลยืนยันให้ (ลิงก์ใช้ได้ 24 ชั่วโมง) ถ้าส่งไม่สำเร็จ การสมัครยังสำเร็จอยู่ (`verificationEmailSent: false`)
-- ยังไม่ยืนยันก็ login ได้ หน้าแรกจะมีแถบแจ้งและปุ่ม "ส่งอีเมลยืนยันอีกครั้ง" (ส่งได้ 3 ครั้ง/ชั่วโมง)
-- route ไหนต้องการเฉพาะคนที่ยืนยันอีเมลแล้ว ให้ใส่ `requireVerifiedEmail` หลัง `authMiddleware`
-- ลิงก์เปิดหน้า `/verify-email` ซึ่งค่อย POST token ไปที่ API (ไม่ยืนยันแค่เพราะเปิดลิงก์) โปรแกรมสแกนลิงก์ในอีเมลจะได้ไม่ใช้ token ไปก่อน
-- ไฟล์: `controllers/authController.js` (verifyEmail, resendVerification), `middleware/authMiddleware.js`, `public/verify-email.html`, `public/js/home.js`
-
-### 3. ยกเลิก token ตอน logout หรือเปลี่ยนรหัสผ่าน
-
-- ตาราง `users` มีคอลัมน์ `token_version` และ JWT ทุกอันเก็บเลข version ตอนที่ออก token
-- `authMiddleware` อ่านผู้ใช้จากฐานข้อมูลทุก request ถ้าเลขไม่ตรง → 401 (หน้าเว็บเด้งไป `/login?expired=1`)
-- `POST /api/auth/logout` เพิ่มเลข version → token **ทุกอัน** ของผู้ใช้ใช้ไม่ได้ (= ออกจากระบบทุกอุปกรณ์)
-- `POST /api/auth/change-password` (ฟอร์มในหน้าแรก) และ reset-password ก็เพิ่มเลข version เหมือนกัน เปลี่ยนรหัสแล้วอุปกรณ์นี้ได้ token ใหม่ อุปกรณ์อื่นหลุด
-- ผลพลอยได้: role ที่ admin เปลี่ยน หรือบัญชีที่ถูกลบ มีผลทันที ไม่ต้องรอ token หมดอายุ (แลกกับ query เพิ่ม 1 ครั้งต่อ request)
-- ไฟล์: `migrations/002_auth_features.sql`, `services/tokenService.js`, `middleware/authMiddleware.js`
-
-### 4. rate limit ต่ออีเมล
-
-| อะไร | จำกัด | นับตาม |
-|---|---|---|
-| login ผิด | 5 ครั้ง / 15 นาที (login สำเร็จไม่นับ) | อีเมล |
-| ขอลิงก์ลืมรหัสผ่าน | 3 ครั้ง / ชั่วโมง | อีเมล |
-| ส่งอีเมลยืนยันซ้ำ | 3 ครั้ง / ชั่วโมง | ผู้ใช้ |
-| register / login / reset | 20 ครั้ง / 15 นาที (เดิม, ปรับได้ด้วย `RATE_LIMIT_IP_MAX`) | IP |
-
-- ต่อ IP กันเครื่องเดียวลองหลายบัญชี ต่ออีเมลกันการเดารหัสบัญชีเดียวจากหลาย IP
-- ตัวนับเก็บในหน่วยความจำของ process: restart แล้วเริ่มนับใหม่ และถ้ารัน Node หลาย process ต้องเปลี่ยนไปใช้ store กลาง เช่น `rate-limit-redis`
-- ไฟล์: `middleware/rateLimiters.js`, `routes/authRoutes.js`
-
-### 5. หน้า admin สำหรับเปลี่ยน role
-
-- เพิ่ม role `admin` ตั้ง admin คนแรกด้วย `npm run make-admin -- email@example.com`
-- หน้า `/admin` (มีลิงก์ในหน้าแรกเมื่อเป็น admin): ตารางผู้ใช้ ค้นหาอีเมล/ชื่อ แบ่งหน้าละ 20 เลือก role จาก dropdown แล้วบันทึกทันที
-- API `/api/admin/*` กั้นด้วย `authMiddleware` + `requireRole('admin')` ทั้งหมด
-- เปลี่ยน role ของตัวเองไม่ได้ (กัน admin คนสุดท้ายลดสิทธิ์ตัวเองจนไม่มีใครเข้าหน้านี้ได้)
-- การเปลี่ยน role ทุกครั้งถูกบันทึกใน log (`event: "role_changed"`, admin คนไหน, จาก role อะไรเป็นอะไร)
-- ไฟล์: `controllers/adminController.js`, `routes/adminRoutes.js`, `scripts/make-admin.js`, `public/admin.html`, `public/js/admin.js`
-
-### 6. เทสต์อัตโนมัติ ที่รันกับฐานข้อมูลจริง
+### คำสั่งฐานข้อมูล
 
 ```bash
-npm run db:up        # MySQL ใน Docker (สร้างฐานข้อมูล chang_test ให้)
-# ใส่ใน .env:  TEST_DATABASE_URL=mysql://chang_app:password@localhost:3306/chang_test
-npm test
+npm run db:migrate     # รัน migration ที่ยังไม่ได้รัน
+npm run db:rollback    # ย้อน migration ชุดล่าสุด
+npm run db:seed        # ใส่ข้อมูลตั้งต้น (รันซ้ำได้ ไม่สร้างข้อมูลซ้ำ)
+npm run db:reset       # ล้างทั้งหมดแล้วสร้างใหม่
 ```
 
-- ใช้ `node:test` ที่มากับ Node + `supertest` ยิง request เข้า `app.js` ตรงๆ ไม่ต้องเปิด port
-- ก่อนรัน: รัน migration แล้วล้างตารางทั้งหมด ชื่อฐานข้อมูลต้องมีคำว่า `test` ไม่อย่างนั้นเทสต์จะไม่ยอมรัน (กันลบข้อมูลจริง)
-- อีเมลไม่ถูกส่งจริง แต่เก็บไว้ใน `outbox` ให้เทสต์ดึง token จากลิงก์ไปใช้ต่อ
-- ครอบคลุม: register/login/me, ยืนยันอีเมล, logout และเปลี่ยนรหัสแล้ว token เก่าใช้ไม่ได้, ลืมรหัส (ใช้ซ้ำ/หมดอายุ), rate limit ต่ออีเมล, สิทธิ์ admin
-- ไฟล์: `test/helpers.js`, `test/auth.test.js`, `test/admin.test.js`, `docker-compose.yml`, `test/create-test-db.sql`
+### เทสต์
 
-### 7. ระบบ migration
+```bash
+docker compose up -d postgres
+cd backend && npm test
+```
 
-- ไฟล์ SQL อยู่ใน `migrations/` ตั้งชื่อ `NNN_ชื่อ.sql` รันเรียงตามเลข
-- ตาราง `schema_migrations` จำว่าไฟล์ไหนรันไปแล้ว `npm start` รันไฟล์ที่ยังไม่ได้รันให้เอง (ปิดได้ด้วย `MIGRATE_ON_START=false` แล้วรัน `npm run migrate` เอง)
-- ใช้ `GET_LOCK` ของ MySQL กันเปิด server หลายตัวพร้อมกันแล้วรัน migration ซ้ำ
-- ฐานข้อมูลเดิมที่สร้างจาก `sql/users_table.sql` ใช้ต่อได้เลย (001 ใช้ `CREATE TABLE IF NOT EXISTS`)
-- **กฎ**: ห้ามแก้ไฟล์ที่เคยรันไปแล้ว จะเปลี่ยนตารางให้สร้างไฟล์ใหม่ เช่น `003_add_phone.sql`
-- MySQL commit คำสั่ง `ALTER`/`CREATE` ทันที ถ้าไฟล์พังกลางทาง จะ rollback ไม่ได้ ให้แยกไฟล์เล็กๆ
-- ไฟล์: `scripts/migrate.js`, `migrations/001_create_users.sql`, `migrations/002_auth_features.sql`
+ครอบคลุม 48 เคส ทั้งการคำนวณราคา, การกันจองเกินโควตา, การตรวจสอบข้อมูลนำเข้า, สิทธิ์การเข้าถึง,
+ลำดับการเปลี่ยนสถานะ, สมาชิก, การยกเลิก, การชำระเงิน, การแจ้งเตือน, รายงาน และค่าตั้งระบบ
 
-### 8. log แบบมีโครงสร้าง
+> เทสต์ยิงเข้าฐานข้อมูลตัวเดียวกับที่ระบบใช้อยู่ ข้อมูลที่เทสต์สร้างใช้อีเมลโดเมน `@test.chokchai.local`
+> และถูกลบออกเมื่อจบ ไม่แตะข้อมูลจริง
 
-- ใช้ `pino` เขียน log เป็น JSON บรรทัดละ 1 เหตุการณ์ ส่งเข้า Loki / CloudWatch / ELK แล้วค้นตาม field ได้
+---
 
-  ```json
-  {"level":"warn","time":"2026-09-27T09:36:40.202Z","service":"chang-auth-api","req":{"id":"779af1ba-...","method":"POST","url":"/api/auth/login","ip":"203.0.113.5"},"event":"login_failed","userId":1,"msg":"wrong password"}
-  ```
+## สลับไปใช้ MySQL
 
-- ทุก request มี `reqId` (ส่ง header `X-Request-Id` มาเองได้ และตอบกลับใน header เดียวกัน) log ทุกบรรทัดของ request เดียวกันจะมี id เดียวกัน
-- เหตุการณ์สำคัญมี field `event`: `user_registered`, `login`, `login_failed`, `logout`, `password_changed`, `password_reset_requested`, `password_reset`, `email_verified`, `role_changed`, `rate_limited`, `mail_failed`
-- ไม่เขียนรหัสผ่าน / token / header `Authorization` ลง log
-- `LOG_LEVEL` ปรับระดับได้ `npm run dev` แสดงผลแบบอ่านง่ายด้วย `pino-pretty`
-- ไฟล์: `config/logger.js`, `app.js` (pino-http)
+โค้ดทั้งหมดเขียนผ่าน Knex query builder จึงใช้ได้กับทั้ง PostgreSQL และ MySQL โดยไม่ต้องแก้ query
 
-## ยังไม่ได้เพิ่ม
+```bash
+docker compose --profile mysql up -d mysql
+```
 
-1. rate limit แบบใช้ store กลาง (Redis) สำหรับรันหลาย process
-2. logout เฉพาะอุปกรณ์เดียว (ตอนนี้ logout = ออกทุกอุปกรณ์)
-3. CI ที่รัน `npm test` อัตโนมัติ (เช่น GitHub Actions พร้อม MySQL service)
+แล้วแก้ service `api` ใน `docker-compose.yml` ให้เป็น `DB_CLIENT: mysql`, `DB_HOST: mysql`,
+`DB_PORT: 3306` จากนั้น `docker compose up -d --force-recreate api`
+
+ใน DBeaver เลือก driver **MySQL** แล้วต่อที่ `localhost:3306` ด้วย user/password ชุดเดียวกัน
+
+> MySQL ไม่ได้เปิดโดยค่าเริ่มต้นเพื่อประหยัดพื้นที่ดิสก์ — PostgreSQL เพียงตัวเดียวเพียงพอสำหรับการใช้งานปกติ
+
+---
+
+## โครงสร้างไฟล์
+
+```
+Chokchai/
+├─ docker-compose.yml          นิยาม service ทั้งหมด (postgres, api, web, mailpit)
+├─ docker-compose.https.yml    ส่วนเสริมสำหรับขึ้นใช้งานจริงด้วย HTTPS
+├─ .env.example                ตัวอย่างค่า environment (คัดลอกเป็น .env)
+├─ docs/
+│  ├─ VERIFY.md                วิธีตรวจสอบระบบ + ข้อมูลเก็บที่ไหน
+│  ├─ API.md                   เอกสาร REST API ฉบับเต็ม
+│  ├─ DBEAVER.md               วิธีเชื่อม DBeaver + query ตัวอย่าง
+│  ├─ ERD.md                   ER diagram และคำอธิบายคอลัมน์
+│  └─ api-playground.http      ยิง API ทดสอบจาก VS Code
+├─ scripts/smoke-test.ps1      ตรวจระบบอัตโนมัติ 45 รายการ
+├─ .vscode/tasks.json          คำสั่งที่ใช้บ่อย กดรันจาก VS Code ได้
+├─ infra/
+│  ├─ nginx/default.conf       nginx แบบ HTTP (dev)
+│  ├─ nginx/https.conf         nginx แบบ HTTPS (production)
+│  ├─ nginx/snippets/          ส่วนที่สอง config ใช้ร่วมกัน (proxy, cache, security headers)
+│  └─ certs/                   ที่วาง certificate (ไม่ถูก commit)
+├─ frontend/
+│  ├─ index.html               หน้าแรก
+│  ├─ activities.html          หน้าเลือกกิจกรรม ค้นหา/กรอง + Booking Modal
+│  ├─ activity.html            หน้ารายละเอียดกิจกรรม
+│  ├─ register.html            สมัครสมาชิก
+│  ├─ login.html               เข้าสู่ระบบ (ลูกค้า)
+│  ├─ account.html             บัญชีของฉัน: ประวัติการจอง แจ้งเตือน โปรไฟล์
+│  ├─ booking.html             ตรวจสอบการจองด้วยรหัส + อีเมล
+│  ├─ payment.html             หน้าชำระเงิน / ผลการชำระเงิน
+│  ├─ admin.html               ระบบหลังบ้าน
+│  ├─ css/app.css              Tailwind ที่ build แล้ว
+│  ├─ src/tailwind.css         ต้นทางของ CSS
+│  ├─ tailwind.config.js       สี / ฟอนต์ของแบรนด์
+│  ├─ js/api.js                ตัวกลางเรียก REST API + เก็บ token
+│  ├─ js/common.js             header/footer, ป้ายสถานะ, การ์ดการจอง ที่ใช้ร่วมกัน
+│  ├─ js/app.js                logic ของหน้าแรกและหน้ากิจกรรม
+│  ├─ js/pages.js              logic ของหน้าสมาชิก / ตรวจสอบการจอง / ชำระเงิน / รายละเอียด
+│  ├─ js/admin.js              logic ของระบบหลังบ้าน
+│  └─ images/                  โลโก้ รูป Hero และภาพประกอบกิจกรรม
+└─ backend/
+   ├─ Dockerfile
+   ├─ knexfile.js              ตั้งค่าการเชื่อมต่อฐานข้อมูล
+   ├─ tests/api.test.js
+   └─ src/
+      ├─ server.js             จุดเริ่มต้น + graceful shutdown
+      ├─ app.js                ประกอบ Express app
+      ├─ config/               อ่านและตรวจสอบค่า environment
+      ├─ db/                   knex instance, migrations, seeds
+      ├─ middleware/           auth (ทีมงาน / ลูกค้า), validation, error handling
+      ├─ routes/               public, account, payment, auth, admin
+      ├─ services/             business logic: booking, activity, user, payment,
+      │                        notification, mail, settings, content, auth
+      ├─ validators/           zod schema สำหรับตรวจข้อมูลนำเข้า
+      └─ utils/
+```
+
+---
+
+## ความปลอดภัยที่ทำไว้แล้ว
+
+- รหัสผ่านของทีมงานและลูกค้าเก็บเป็น bcrypt hash ไม่เก็บ plaintext
+  รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวและมีทั้งตัวอักษรและตัวเลข
+- token ของลูกค้ากับของทีมงานแยกชนิดกัน — token ลูกค้าเรียก `/api/admin/*` ไม่ได้ (HTTP 403)
+- JWT ของทีมงานหมดอายุใน 8 ชั่วโมง ของลูกค้า 7 วัน และตรวจสถานะบัญชีกับฐานข้อมูลทุก request
+  (ระงับบัญชีแล้วมีผลทันที)
+- สิทธิ์ `staff` จัดการการจองและเนื้อหาได้ แต่ลบข้อมูล แก้ค่าตั้งระบบ และจัดการทีมงานไม่ได้
+  และระบบไม่ยอมให้ปิดบัญชี admin คนสุดท้ายหรือปิดบัญชีตัวเอง
+- จำกัดจำนวนครั้งการ login / สมัครสมาชิก และการส่งฟอร์มสาธารณะ (20 ครั้ง/15 นาที)
+- ตรวจสอบข้อมูลนำเข้าทุก endpoint ด้วย Zod ก่อนแตะฐานข้อมูล
+- Knex ใช้ parameterized query ทั้งหมด ไม่มีการต่อ SQL ด้วยสตริง
+- ลูกค้าที่ไม่ล็อกอินดู / ยกเลิก / จ่ายเงินการจองได้ ต้องรู้ทั้งรหัสการจองและอีเมลที่ใช้จอง
+  ส่วนสมาชิกเห็นเฉพาะการจองของบัญชีตัวเอง
+- ลิงก์หน้าชำระเงินผูกกับ token แบบ HMAC ของการจองนั้น และ webhook ของ Stripe ถูกตรวจลายเซ็นทุกครั้ง
+- ยอดเงินที่เรียกเก็บมาจากฐานข้อมูลเสมอ ไม่รับจากเบราว์เซอร์
+- ใส่ security headers ที่ nginx และ helmet, จำกัด CORS เฉพาะ origin ที่กำหนด, มี config HTTPS + HSTS พร้อมใช้
+- ข้อความ login ผิดไม่บอกว่าอีเมลมีอยู่ในระบบหรือไม่
+
+## สิ่งที่ต้องทำเองก่อนเปิดใช้งานจริง
+
+ทั้งหมดเป็นการ "ใส่ของจริง" ลงในช่องที่ระบบเตรียมไว้แล้ว ไม่ต้องแก้โค้ด
+
+- **Certificate ของโดเมนจริง** — ดูหัวข้อ [HTTPS](#https-ขึ้นใช้งานจริง)
+- **ค่าลับใน `.env`** — สุ่ม `JWT_SECRET` ใหม่ เปลี่ยน `DB_PASSWORD` และ `SEED_ADMIN_PASSWORD`
+- **บัญชีรับเงิน** — กรอกหมายเลขพร้อมเพย์ของร้านในหน้าตั้งค่าระบบ (หรือใส่คีย์ Stripe) ดูหัวข้อ [การชำระเงิน](#การชำระเงิน)
+  (ค่าเริ่มต้น `mock` เป็นการชำระจำลอง ห้ามใช้กับลูกค้าจริง)
+- **เวลารับรอบกลางวัน** — ค่าเริ่มต้น `11:30 - 12:00 น.` เป็นเวลาสมมติ แก้ให้ตรงกับรอบจริงในหน้าตั้งค่าระบบ
+- **SMTP ของผู้ให้บริการอีเมล** — ดูหัวข้อ [อีเมลและการแจ้งเตือน](#อีเมลและการแจ้งเตือน)
+  (ค่าเริ่มต้นส่งเข้า Mailpit ไม่ถึงลูกค้า)
+- **รูปถ่ายกิจกรรมจริง** — ตอนนี้ใช้ภาพประกอบแบบวาด (`frontend/images/activities/*.svg`)
+  อัปโหลดรูปจริงลงโฟลเดอร์เดียวกัน แล้วแก้ "ที่อยู่รูปภาพ" ของแต่ละกิจกรรมในหน้าหลังบ้าน → แท็บกิจกรรม
