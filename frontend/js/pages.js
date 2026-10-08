@@ -363,18 +363,23 @@ function initBookingLookup() {
   async function lookup() {
     const ref = form.elements.ref.value.trim().toUpperCase();
     const email = form.elements.email.value.trim();
-    if (!ref || !email) return setMessage(message, 'กรุณากรอกรหัสการจองและอีเมล');
+    if (!ref || !email) return setMessage(message, 'Please enter your booking reference and email.');
 
     setMessage(message, '');
-    result.innerHTML = '<p class="text-center text-gray-400 text-sm py-6">กำลังค้นหา...</p>';
+    result.innerHTML = '<p class="text-center text-gray-400 text-sm py-6">Searching...</p>';
     try {
       const booking = await api.lookupBooking(ref, email);
       current = { ref: booking.booking_ref, email };
-      result.innerHTML = bookingCard(booking, { paymentProvider: booking.payment?.provider });
+      result.innerHTML = bookingCard(booking, { paymentProvider: booking.payment?.provider, lang: 'en' });
     } catch (error) {
       current = null;
       result.innerHTML = '';
-      setMessage(message, errorText(error));
+      // ข้อความจาก API เป็นภาษาไทย — ไม่เจอการจอง (404) หรือรูปแบบรหัส/อีเมลผิด (422) แจ้งเป็นอังกฤษเอง
+      const text = {
+        404: 'We could not find a booking with that reference and email. Please check both and try again.',
+        422: 'Please check the booking reference and email format.',
+      }[error.status];
+      setMessage(message, text ?? errorText(error));
     }
     return undefined;
   }
@@ -394,10 +399,10 @@ function initBookingLookup() {
           const checkout = await api.payBooking(current.ref, current.email);
           window.location.href = checkout.checkout_url;
         } else if (button.dataset.action === 'cancel') {
-          if (!window.confirm(`ยืนยันยกเลิกการจอง ${current.ref}?`)) return;
+          if (!window.confirm(`Cancel booking ${current.ref}?`)) return;
           await api.cancelBooking(current.ref, current.email);
           await lookup();
-          setMessage(message, `ยกเลิกการจอง ${current.ref} เรียบร้อยแล้ว`, true);
+          setMessage(message, `Booking ${current.ref} has been cancelled.`, true);
         }
       } catch (error) {
         setMessage(message, errorText(error));
@@ -421,31 +426,31 @@ function initPayment() {
 
   const summaryRows = (payment) => `
     <dl class="rounded-lg border border-gray-200 divide-y divide-gray-200 text-sm">
-      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">รหัสการจอง</dt><dd class="font-mono font-bold text-forest">${escapeHtml(payment.booking_ref)}</dd></div>
-      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">กิจกรรม</dt><dd class="font-semibold text-right">${escapeHtml(payment.activity?.name_th ?? '')}</dd></div>
-      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">วันที่เข้าร่วม</dt><dd class="font-semibold">${formatDate(payment.booking_date)}</dd></div>
-      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">ยอดชำระ</dt><dd class="font-extrabold text-gold text-lg">${formatTHB(payment.total_amount)}</dd></div>
+      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">Booking reference</dt><dd class="font-mono font-bold text-forest">${escapeHtml(payment.booking_ref)}</dd></div>
+      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">Activity</dt><dd class="font-semibold text-right">${escapeHtml(payment.activity?.name ?? '')}</dd></div>
+      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">Activity date</dt><dd class="font-semibold">${formatDate(payment.booking_date, 'en-GB')}</dd></div>
+      <div class="flex justify-between gap-4 px-4 py-3"><dt class="text-gray-500">Amount due</dt><dd class="font-extrabold text-gold text-lg">${formatTHB(payment.total_amount)}</dd></div>
     </dl>`;
 
   const links = `
     <div class="flex flex-wrap justify-center gap-3">
-      <a href="account.html" class="border border-forest text-forest font-bold px-6 py-3 rounded-lg">บัญชีของฉัน</a>
-      <a href="index.html" class="bg-forest hover:bg-forest-dark text-white font-bold px-6 py-3 rounded-lg transition">กลับหน้าแรก</a>
+      <a href="account.html" class="border border-forest text-forest font-bold px-6 py-3 rounded-lg">My Account</a>
+      <a href="index.html" class="bg-forest hover:bg-forest-dark text-white font-bold px-6 py-3 rounded-lg transition">Back to home</a>
     </div>`;
 
   function showError(text) {
     card.innerHTML = `
-      <h1 class="text-xl font-extrabold text-red-700 text-center">เปิดหน้าชำระเงินไม่ได้</h1>
+      <h1 class="text-xl font-extrabold text-red-700 text-center">This payment page could not be opened</h1>
       <p class="text-sm text-gray-600 text-center">${escapeHtml(text)}</p>
-      <a href="booking.html" class="mx-auto bg-forest text-white font-bold px-6 py-3 rounded-lg">ตรวจสอบการจอง</a>`;
+      <a href="booking.html" class="mx-auto bg-forest text-white font-bold px-6 py-3 rounded-lg">Check my booking</a>`;
   }
 
   function render(payment, { waiting = false } = {}) {
     if (payment.payment_status === 'paid') {
       card.innerHTML = `
         <p class="text-5xl text-center">✅</p>
-        <h1 class="text-2xl font-extrabold text-forest text-center">ชำระเงินสำเร็จ</h1>
-        <p class="text-sm text-gray-600 text-center">การจองของคุณได้รับการยืนยันแล้ว เราส่งรายละเอียดไปที่ ${escapeHtml(payment.email)}</p>
+        <h1 class="font-script text-forest-dark text-4xl text-center">Payment successful</h1>
+        <p class="text-sm text-gray-600 text-center">Your booking is confirmed. We have sent the details to ${escapeHtml(payment.email)}.</p>
         ${summaryRows(payment)}
         ${links}`;
       return;
@@ -453,7 +458,7 @@ function initPayment() {
 
     if (payment.status === 'cancelled') {
       card.innerHTML = `
-        <h1 class="text-xl font-extrabold text-center">การจองนี้ถูกยกเลิกแล้ว</h1>
+        <h1 class="text-xl font-extrabold text-center">This booking has been cancelled</h1>
         ${summaryRows(payment)}
         ${links}`;
       return;
@@ -464,8 +469,8 @@ function initPayment() {
     if (payment.payment_status === 'reviewing') {
       card.innerHTML = `
         <p class="text-5xl text-center">🕒</p>
-        <h1 class="text-2xl font-extrabold text-forest text-center">ได้รับแจ้งการโอนเงินแล้ว</h1>
-        <p class="text-sm text-gray-600 text-center">${payment.has_slip ? 'เราได้รับสลิปของคุณแล้ว ' : ''}ทีมงานจะตรวจสอบยอดเงินและยืนยันการจองให้ภายใน 24 ชั่วโมง เราจะส่งอีเมลแจ้งไปที่ ${escapeHtml(payment.email)}</p>
+        <h1 class="font-script text-forest-dark text-4xl text-center">Transfer notice received</h1>
+        <p class="text-sm text-gray-600 text-center">${payment.has_slip ? 'We have received your slip. ' : ''}Our team will check the payment and confirm your booking within 24 hours. We will email you at ${escapeHtml(payment.email)}.</p>
         ${summaryRows(payment)}
         ${links}`;
       return;
@@ -473,38 +478,41 @@ function initPayment() {
 
     if (payment.provider === 'promptpay' && payment.promptpay) {
       card.innerHTML = `
-        <h1 class="text-2xl font-extrabold text-forest text-center">สแกนจ่ายด้วย PromptPay</h1>
+        <h1 class="font-script text-forest-dark text-4xl text-center">Scan to pay with PromptPay</h1>
         <div class="flex flex-col items-center gap-3">
-          <img src="${payment.promptpay.qr_image}" alt="QR พร้อมเพย์สำหรับชำระ ${formatTHB(payment.total_amount)}" width="260" height="260" class="border border-gray-200 rounded-xl" />
+          <img src="${payment.promptpay.qr_image}" alt="PromptPay QR code for ${formatTHB(payment.total_amount)}" width="260" height="260" class="border border-gray-200 rounded-xl" />
           <p class="text-3xl font-extrabold text-gold">${formatTHB(payment.total_amount)}</p>
           <p class="text-sm text-center">
-            ชื่อบัญชีผู้รับ: <strong>${escapeHtml(payment.promptpay.account_name)}</strong><br>
-            <span class="text-gray-500">พร้อมเพย์ ${escapeHtml(payment.promptpay.account_id)}</span>
+            Account name: <strong>${escapeHtml(payment.promptpay.account_name)}</strong><br>
+            <span class="text-gray-500">PromptPay ${escapeHtml(payment.promptpay.account_id)}</span>
           </p>
         </div>
         <ol class="text-sm text-gray-600 list-decimal pl-5 flex flex-col gap-1">
-          <li>เปิดแอปธนาคารของคุณ แล้วเลือก "สแกน QR"</li>
-          <li>ตรวจว่า<strong>ชื่อผู้รับและยอดเงิน</strong>ตรงกับด้านบน แล้วกดยืนยันการโอน</li>
-          <li>บันทึกสลิป แล้วกลับมาที่หน้านี้เพื่อ<strong>แนบสลิป</strong>และกดปุ่ม "แจ้งโอนเงินแล้ว"</li>
+          <li>Open your banking app and choose "Scan QR".</li>
+          <li>Check that the <strong>account name and amount</strong> match the details above, then confirm the transfer.</li>
+          <li>Save the slip, then come back to this page to <strong>attach the slip</strong> and press "I have transferred".</li>
         </ol>
         ${summaryRows(payment)}
         <div>
-          <label for="transfer-slip" class="text-sm font-semibold block mb-2">แนบสลิปโอนเงิน *</label>
-          <input id="transfer-slip" type="file" accept="image/jpeg,image/png,image/webp"
-                 class="block w-full text-sm border border-gray-300 rounded-lg bg-cream file:mr-4 file:py-3 file:px-4 file:border-0 file:bg-forest file:text-white file:font-bold file:cursor-pointer" />
-          <p class="text-xs text-gray-500 mt-1">ไฟล์รูป JPG หรือ PNG — ทีมงานใช้ตรวจสอบยอดเงินกับการจองนี้เท่านั้น</p>
-          <img id="slip-preview" alt="ตัวอย่างสลิปที่แนบ" class="hidden mt-3 max-h-72 mx-auto rounded-lg border border-gray-200" />
+          <p class="text-sm font-semibold mb-2">Attach transfer slip *</p>
+          <label for="transfer-slip" class="flex items-center gap-4 w-full text-sm border border-gray-300 rounded-lg bg-cream overflow-hidden cursor-pointer focus-within:border-gold">
+            <span class="bg-forest text-white font-bold py-3 px-4 shrink-0">Choose file</span>
+            <span id="slip-filename" class="text-gray-500 truncate pr-4">No file chosen</span>
+            <input id="transfer-slip" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" />
+          </label>
+          <p class="text-xs text-gray-500 mt-1">JPG or PNG image — used by our team only to match the payment to this booking.</p>
+          <img id="slip-preview" alt="Preview of the attached slip" class="hidden mt-3 max-h-72 mx-auto rounded-lg border border-gray-200" />
         </div>
         <div>
-          <label for="transfer-note" class="text-sm font-semibold block mb-2">เวลาที่โอน / หมายเหตุ (ถ้ามี)</label>
-          <input id="transfer-note" type="text" maxlength="90" placeholder="เช่น โอนเวลา 14:32 น. จากธนาคารกสิกร"
+          <label for="transfer-note" class="text-sm font-semibold block mb-2">Transfer time / note (optional)</label>
+          <input id="transfer-note" type="text" maxlength="90" placeholder="e.g. Transferred at 14:32 from Kasikorn Bank"
                  class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-cream" />
         </div>
         <p id="payment-message" class="hidden" role="alert"></p>
         <button id="transfer-notify" type="button" class="bg-gold hover:bg-gold/90 text-white font-bold py-3.5 rounded-lg transition">
-          แจ้งโอนเงินแล้ว
+          I have transferred
         </button>
-        <a href="${lookupUrl}" class="text-center text-sm text-gray-500 hover:text-forest">ชำระภายหลัง</a>`;
+        <a href="${lookupUrl}" class="text-center text-sm text-gray-500 hover:text-forest">Pay later</a>`;
 
       // ย่อรูปทันทีที่เลือกไฟล์ จะได้เห็นตัวอย่างและรู้เลยถ้าไฟล์เปิดไม่ได้
       let slip = null;
@@ -512,6 +520,7 @@ function initPayment() {
         const [file] = event.target.files;
         const preview = $('slip-preview');
         slip = null;
+        $('slip-filename').textContent = file ? file.name : 'No file chosen';
         preview.classList.add('hidden');
         setMessage($('payment-message'), '');
         if (!file) return;
@@ -522,16 +531,17 @@ function initPayment() {
           preview.classList.remove('hidden');
         } catch (error) {
           event.target.value = '';
+          $('slip-filename').textContent = 'No file chosen';
           setMessage($('payment-message'), error.message);
         }
       });
 
       $('transfer-notify').addEventListener('click', (event) => {
         if (!slip) {
-          setMessage($('payment-message'), 'กรุณาแนบสลิปโอนเงินก่อนกดแจ้งโอน');
+          setMessage($('payment-message'), 'Please attach your transfer slip first.');
           return;
         }
-        if (!window.confirm('ยืนยันว่าโอนเงินเรียบร้อยแล้ว?')) return;
+        if (!window.confirm('Confirm that you have completed the transfer?')) return;
         withBusy(event.currentTarget, async () => {
           try {
             render(await api.notifyTransfer(ref, token, { note: $('transfer-note').value.trim() || undefined, slip }));
@@ -545,17 +555,17 @@ function initPayment() {
 
     if (payment.provider === 'mock') {
       card.innerHTML = `
-        <h1 class="text-2xl font-extrabold text-forest text-center">ชำระเงิน</h1>
+        <h1 class="font-script text-forest-dark text-4xl text-center">Payment</h1>
         <p class="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3">
-          <strong>โหมดทดสอบ</strong> — หน้านี้เป็นการชำระเงินจำลอง ไม่มีการตัดเงินจริง
-          กดปุ่มด้านล่างเพื่อจำลองว่าชำระเงินสำเร็จ
+          <strong>Test mode</strong> — this is a simulated payment and no money will be charged.
+          Press the button below to simulate a successful payment.
         </p>
         ${summaryRows(payment)}
         <p id="payment-message" class="hidden" role="alert"></p>
         <button id="mock-pay" type="button" class="bg-gold hover:bg-gold/90 text-white font-bold py-3.5 rounded-lg transition">
-          ชำระเงิน ${formatTHB(payment.total_amount)}
+          Pay ${formatTHB(payment.total_amount)}
         </button>
-        <a href="booking.html?ref=${encodeURIComponent(payment.booking_ref)}&email=${encodeURIComponent(payment.email)}" class="text-center text-sm text-gray-500 hover:text-forest">ชำระภายหลัง</a>`;
+        <a href="booking.html?ref=${encodeURIComponent(payment.booking_ref)}&email=${encodeURIComponent(payment.email)}" class="text-center text-sm text-gray-500 hover:text-forest">Pay later</a>`;
 
       $('mock-pay').addEventListener('click', (event) =>
         withBusy(event.currentTarget, async () => {
@@ -571,18 +581,18 @@ function initPayment() {
 
     // Stripe: กลับมาจากหน้าชำระเงินแล้ว แต่ผลยืนยันมาทาง webhook ซึ่งอาจช้ากว่าเล็กน้อย
     card.innerHTML = `
-      <h1 class="text-xl font-extrabold text-center">${waiting ? 'กำลังรอยืนยันการชำระเงิน...' : 'ยังไม่ได้ชำระเงิน'}</h1>
+      <h1 class="text-xl font-extrabold text-center">${waiting ? 'Waiting for payment confirmation...' : 'Payment not completed'}</h1>
       <p class="text-sm text-gray-600 text-center">${
         waiting
-          ? 'ระบบกำลังรอผลจากผู้ให้บริการชำระเงิน หน้านี้จะอัปเดตเองภายในไม่กี่วินาที'
-          : 'รายการชำระเงินยังไม่สำเร็จ คุณกลับไปชำระใหม่ได้จากหน้าตรวจสอบการจอง'
+          ? 'We are waiting for the result from the payment provider. This page will update automatically in a few seconds.'
+          : 'Your payment has not gone through. You can try again from the My Booking page.'
       }</p>
       ${summaryRows(payment)}
-      <a href="booking.html?ref=${encodeURIComponent(payment.booking_ref)}&email=${encodeURIComponent(payment.email)}" class="mx-auto bg-forest text-white font-bold px-6 py-3 rounded-lg">ไปหน้าตรวจสอบการจอง</a>`;
+      <a href="booking.html?ref=${encodeURIComponent(payment.booking_ref)}&email=${encodeURIComponent(payment.email)}" class="mx-auto bg-forest text-white font-bold px-6 py-3 rounded-lg">Go to My Booking</a>`;
   }
 
   if (!ref || !token) {
-    showError('ลิงก์ชำระเงินไม่ครบถ้วน');
+    showError('This payment link is incomplete.');
     return;
   }
 

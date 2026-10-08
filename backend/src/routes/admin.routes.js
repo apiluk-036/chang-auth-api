@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import * as activityService from '../services/activity.service.js';
 import * as bookingService from '../services/booking.service.js';
 import * as contentService from '../services/content.service.js';
+import { buildBookingsWorkbook } from '../services/export.service.js';
 import * as notificationService from '../services/notification.service.js';
 import * as settingsService from '../services/settings.service.js';
 import * as userService from '../services/user.service.js';
@@ -13,6 +14,7 @@ import {
   activityBodySchema,
   activityUpdateSchema,
   adminReviewListQuery,
+  bookingExportQuery,
   bookingListQuery,
   bookingStatusSchema,
   createStaffSchema,
@@ -64,6 +66,24 @@ router.get(
   validate({ query: bookingListQuery }),
   asyncHandler(async (req, res) => {
     res.json(await bookingService.listBookings(req.validated.query));
+  }),
+);
+
+// ส่งออกรายการจองตามตัวกรองเดียวกับหน้ารายการ เป็นไฟล์ Excel — ต้องประกาศก่อน /bookings/:id ไม่งั้น "export" จะถูกมองเป็น id
+router.get(
+  '/bookings/export',
+  validate({ query: bookingExportQuery }),
+  asyncHandler(async (req, res) => {
+    const bookings = await bookingService.listBookingsForExport(req.validated.query);
+    const file = await buildBookingsWorkbook(bookings);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Length': file.length,
+      'Content-Disposition': `attachment; filename="chokchai-bookings-${dayjs().format('YYYY-MM-DD')}.xlsx"`,
+      // มีข้อมูลส่วนตัวของลูกค้า ห้ามให้เบราว์เซอร์หรือ proxy เก็บแคชไว้
+      'Cache-Control': 'private, no-store',
+    });
+    res.send(file);
   }),
 );
 

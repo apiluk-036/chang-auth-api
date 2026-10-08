@@ -296,10 +296,10 @@ export async function markPaid(bookingId, { method, paymentRef }) {
   });
 }
 
-export async function listBookings(filters) {
-  const { page, limit, status, payment_status, activity_id, date_from, date_to, q } = filters;
-
-  const applyFilters = (query) => {
+/** ตัวกรองรายการจองของหลังบ้าน ใช้ร่วมกันทั้งหน้ารายการและการส่งออก Excel */
+const bookingFilters =
+  ({ status, payment_status, activity_id, date_from, date_to, q }) =>
+  (query) => {
     if (status) query.where('bookings.status', status);
     if (payment_status) query.where('bookings.payment_status', payment_status);
     if (activity_id) query.where('bookings.activity_id', activity_id);
@@ -319,6 +319,10 @@ export async function listBookings(filters) {
     return query;
   };
 
+export async function listBookings(filters) {
+  const { page, limit } = filters;
+  const applyFilters = bookingFilters(filters);
+
   const [{ count }] = await applyFilters(db('bookings')).count({ count: '*' });
   const total = Number(count);
 
@@ -331,6 +335,14 @@ export async function listBookings(filters) {
     data: rows.map(serializeBooking),
     meta: { page, limit, total, total_pages: Math.max(1, Math.ceil(total / limit)) },
   };
+}
+
+/** รายการจองทั้งหมดที่ตรงตัวกรอง (ไม่แบ่งหน้า) สำหรับส่งออกเป็นไฟล์ — จำกัดจำนวนแถวกันไฟล์ใหญ่เกิน */
+export async function listBookingsForExport(filters, { maxRows = 20000 } = {}) {
+  const rows = await bookingFilters(filters)(withActivity(db('bookings')))
+    .orderBy('bookings.created_at', 'desc')
+    .limit(maxRows);
+  return rows.map(serializeBooking);
 }
 
 export async function getBookingById(id) {

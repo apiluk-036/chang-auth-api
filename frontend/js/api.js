@@ -230,6 +230,22 @@ export const api = {
     return URL.createObjectURL(await response.blob());
   },
 
+  /** ไฟล์ Excel ของรายการจองตามตัวกรอง — ต้องแนบ token จึงโหลดเป็น blob แล้วให้หน้าเว็บสั่งดาวน์โหลดเอง */
+  exportBookings: async (params = {}) => {
+    const query = new URLSearchParams(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== '' && value !== null),
+    ).toString();
+    const response = await fetch(`${API_BASE}/admin/bookings/export${query ? `?${query}` : ''}`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new ApiRequestError(payload?.error?.message ?? 'ส่งออกไฟล์ไม่สำเร็จ', { status: response.status });
+    }
+    const filename = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1];
+    return { blob: await response.blob(), filename: filename ?? 'chokchai-bookings.xlsx' };
+  },
+
   adminActivities: () => data(admin('/admin/activities')),
   createActivity: (payload) => data(admin('/admin/activities', { method: 'POST', body: payload })),
   updateActivity: (id, payload) => data(admin(`/admin/activities/${id}`, { method: 'PATCH', body: payload })),

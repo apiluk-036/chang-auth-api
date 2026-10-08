@@ -275,18 +275,31 @@ const bookingsTab = {
     <label class="text-xs text-gray-500 font-semibold flex flex-col gap-1">ถึง
       <input id="filter-to" type="date" class="${inputClass}" />
     </label>
-    <input id="filter-search" type="search" placeholder="ค้นหารหัสจอง / ชื่อ / อีเมล / เบอร์โทร" class="${inputClass} flex-1 min-w-[240px]" />`,
+    <input id="filter-search" type="search" placeholder="ค้นหารหัสจอง / ชื่อ / อีเมล / เบอร์โทร" class="${inputClass} flex-1 min-w-[240px]" />
+    <button type="button" data-action="booking-export" title="ดาวน์โหลดรายการจองตามตัวกรองที่เลือก เป็นไฟล์ Excel"
+            class="border border-gray-300 bg-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-50 transition">ดาวน์โหลด Excel</button>`,
+
+  filters: () => ({
+    status: $('filter-status').value,
+    payment_status: $('filter-payment').value,
+    date_from: $('filter-from').value,
+    date_to: $('filter-to').value,
+    q: $('filter-search').value.trim(),
+  }),
+
+  /** ส่งออกทุกรายการที่ตรงตัวกรองปัจจุบัน (ไม่ใช่แค่หน้าที่เห็นอยู่) เป็นไฟล์ .xlsx */
+  async exportExcel() {
+    const { blob, filename } = await api.exportBookings(this.filters());
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast('ดาวน์โหลดไฟล์ Excel แล้ว');
+  },
 
   async render() {
-    const { data, meta } = await api.adminBookings({
-      page: state.page,
-      limit: 20,
-      status: $('filter-status').value,
-      payment_status: $('filter-payment').value,
-      date_from: $('filter-from').value,
-      date_to: $('filter-to').value,
-      q: $('filter-search').value.trim(),
-    });
+    const { data, meta } = await api.adminBookings({ page: state.page, limit: 20, ...this.filters() });
     state.rows = data;
 
     setTable(
@@ -1081,6 +1094,9 @@ async function runAction(action, id, value) {
 
     case 'report-export':
       reportsTab.exportCsv();
+      return false;
+    case 'booking-export':
+      await bookingsTab.exportExcel();
       return false;
 
     default:

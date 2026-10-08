@@ -315,14 +315,14 @@ export function setMessage(element, message, ok = false) {
  * รูปถ่ายจากมือถือมักใหญ่ 3-8 MB ย่อแล้วเหลือไม่กี่ร้อย KB อัปโหลดเร็วและยังอ่านตัวเลขในสลิปได้ชัด
  */
 export async function imageFileToDataUrl(file, { maxSide = 1600, quality = 0.85 } = {}) {
-  if (!file.type.startsWith('image/')) throw new Error('กรุณาเลือกไฟล์รูปภาพ (JPG หรือ PNG)');
+  if (!file.type.startsWith('image/')) throw new Error('Please choose an image file (JPG or PNG).');
 
   const url = URL.createObjectURL(file);
   try {
     const image = await new Promise((resolve, reject) => {
       const element = new Image();
       element.onload = () => resolve(element);
-      element.onerror = () => reject(new Error('เปิดไฟล์รูปนี้ไม่ได้ ลองบันทึกสลิปเป็น JPG หรือ PNG แล้วเลือกใหม่'));
+      element.onerror = () => reject(new Error('This image could not be opened. Save the slip as JPG or PNG and try again.'));
       element.src = url;
     });
 

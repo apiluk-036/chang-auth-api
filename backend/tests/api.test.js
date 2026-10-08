@@ -619,6 +619,33 @@ describe('สมาชิก: สมัคร / เข้าสู่ระบ�
 });
 
 describe('หลังบ้าน: รายงาน / ตั้งค่า / ทีมงาน / กิจกรรม', () => {
+  it('GET /api/admin/bookings/export ส่งไฟล์ Excel ตามตัวกรอง และต้องล็อกอิน', async () => {
+    await request(app).get('/api/admin/bookings/export').expect(401);
+
+    const res = await request(app)
+      .get('/api/admin/bookings/export')
+      .query({ q: TEST_DOMAIN })
+      .set('Authorization', `Bearer ${token}`)
+      .buffer(true)
+      .parse((response, done) => {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => done(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(res.headers['content-type']).toContain('spreadsheetml');
+    expect(res.headers['content-disposition']).toMatch(/attachment; filename="chokchai-bookings-.+\.xlsx"/);
+    // ไฟล์ .xlsx คือ zip จึงขึ้นต้นด้วย "PK"
+    expect(res.body.subarray(0, 2).toString()).toBe('PK');
+
+    await request(app)
+      .get('/api/admin/bookings/export')
+      .query({ status: 'not-a-status' })
+      .set('Authorization', `Bearer ${token}`)
+      .expect(422);
+  });
+
   it('GET /api/admin/reports รวมยอดตามวันและตามกิจกรรม', async () => {
     const res = await request(app).get('/api/admin/reports').set('Authorization', `Bearer ${token}`).expect(200);
 

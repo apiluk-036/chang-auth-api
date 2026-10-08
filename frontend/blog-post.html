@@ -77,7 +77,9 @@
           <a href="index.html#map" class="hover:text-forest transition">Maps</a>
           <a href="index.html#contact" class="hover:text-forest transition">Contact us</a>
         </nav>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 lg:gap-10">
+          <!-- ลิงก์ My Booking / Log in หรือชื่อสมาชิก เติมโดย js/auth-nav.js -->
+          <div data-auth-nav class="hidden lg:flex items-center gap-8 lg:gap-10 text-base lg:text-lg font-semibold text-dark"></div>
           <a href="activities.html" class="hidden sm:inline-block bg-forest hover:bg-forest/90 text-white text-base lg:text-lg font-semibold px-6 lg:px-7 py-3 rounded-lg shadow-md transition">Book Now</a>
           <button id="nav-toggle" class="md:hidden p-2 text-forest" aria-label="เปิดเมนู">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
@@ -91,6 +93,7 @@
         <a href="index.html#reviews">Review</a>
         <a href="index.html#map">Maps</a>
         <a href="index.html#contact">Contact us</a>
+        <div data-auth-nav class="flex flex-col gap-4"></div>
         <a href="activities.html" class="bg-forest text-white text-center px-6 py-3 rounded-lg">Book Now</a>
       </div>
     </header>
@@ -226,5 +229,6 @@
       })();
     </script>
     <script src="script.js"></script>
+    <script type="module" src="js/auth-nav.js"></script>
   </body>
 </html>

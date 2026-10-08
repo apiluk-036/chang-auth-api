@@ -588,6 +588,11 @@ curl -X PATCH http://localhost:8080/api/admin/bookings/12 \
 ส่ง `answer` และ/หรือ `status` — ถ้าส่ง `answer` มาโดยไม่ระบุ `status`
 ระบบจะตั้งเป็น `answered` และบันทึก `answered_at` ให้เอง
 
+## `GET /api/admin/bookings/export`
+
+ดาวน์โหลดรายการจองเป็นไฟล์ Excel (`.xlsx`) รับตัวกรองชุดเดียวกับ `GET /api/admin/bookings` (`status`, `payment_status`, `activity_id`, `date_from`, `date_to`, `q`) แต่ไม่แบ่งหน้า — ได้ทุกรายการที่ตรงตัวกรอง สูงสุด 20,000 แถว
+คำตอบเป็นไฟล์ ไม่ใช่ JSON (`Content-Disposition: attachment`) เบอร์โทรเก็บเป็นข้อความเพื่อไม่ให้เลข 0 ตัวหน้าหาย วันเวลาเป็นเวลาไทย
+
 ## `GET /api/admin/reports?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
 รายงานยอดจองตามวันที่ทำรายการ ไม่ส่งช่วงวันที่ = 30 วันล่าสุด (เลือกได้ไม่เกิน 1 ปี)

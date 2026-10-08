@@ -165,6 +165,8 @@ export const bookingListQuery = z.object({
   q: z.string().trim().max(120).optional(),
 });
 
+export const bookingExportQuery = bookingListQuery.omit({ page: true, limit: true });
+
 export const bookingStatusSchema = z
   .object({
     status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).optional(),
