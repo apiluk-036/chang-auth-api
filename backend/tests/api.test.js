@@ -70,9 +70,9 @@ describe('health & catalog', () => {
     expect(res.body.status).toBe('ok');
   });
 
-  it('GET /api/activities คืน 6 กิจกรรมที่ seed ไว้', async () => {
+  it('GET /api/activities คืน 12 รายการที่ seed ไว้ (6 กิจกรรม + 6 แพ็กเกจ)', async () => {
     const res = await request(app).get('/api/activities').expect(200);
-    expect(res.body.data).toHaveLength(6);
+    expect(res.body.data).toHaveLength(12);
     expect(res.body.data[0]).toMatchObject({ slug: 'elephant-jungle-trekking', adult_price: 990 });
   });
 

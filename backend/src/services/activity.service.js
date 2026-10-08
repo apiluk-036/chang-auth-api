@@ -20,6 +20,7 @@ const COLUMNS = [
   'infant_price',
   'image_url',
   'daily_capacity',
+  'includes_transfer',
   'sort_order',
   'is_active',
   'created_at',
@@ -35,6 +36,7 @@ export function serializeActivity(row) {
     child_price: toNumber(row.child_price),
     infant_price: toNumber(row.infant_price),
     is_active: toBoolean(row.is_active),
+    includes_transfer: toBoolean(row.includes_transfer),
   };
 }
 

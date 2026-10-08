@@ -190,7 +190,12 @@
 
       <!-- STEP 3: รับ-ส่ง -->
       <div id="step-panel-3" class="hidden flex flex-col gap-5">
-        <p class="font-extrabold text-lg flex items-center gap-2">🚐 Pickup point</p>
+        <p id="pickup-heading" class="font-extrabold text-lg flex items-center gap-2">🚐 Pickup point</p>
+        <!-- แพ็กเกจที่ไม่รวมรับ-ส่ง (includes_transfer = false): js/app.js ซ่อนส่วนเลือกจุดรับ แล้วแสดงข้อความนี้แทน -->
+        <p id="no-transfer-note" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3">
+          <strong>Transfer is not included in this package.</strong> Please make your own way to Chokchai Elephant Camp and arrive at the start of the round you choose below.
+        </p>
+        <div id="pickup-fields" class="flex flex-col gap-5">
         <p class="font-semibold text-sm">Where would you like to be picked up?</p>
         <div class="flex flex-col gap-3">
           <label class="flex items-center gap-3">
@@ -214,27 +219,28 @@
           <label for="input-pickup-detail" class="text-sm font-semibold block mb-2">Accommodation name / pickup point (optional)</label>
           <input id="input-pickup-detail" name="pickup_detail" type="text" maxlength="255" placeholder="e.g. Nimman Hotel, Soi 5" class="w-full border border-gray-300 rounded-lg px-4 py-3 bg-cream" />
         </div>
+        </div>
         <div>
-          <p class="font-semibold text-sm mb-3">Choose a pickup round *</p>
+          <p id="round-heading" class="font-semibold text-sm mb-3">Choose a pickup round *</p>
           <!-- เวลาของแต่ละรอบมาจากหน้าตั้งค่าระบบ (GET /api/settings) -->
           <div class="grid sm:grid-cols-2 gap-3">
             <label class="flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-3 bg-cream cursor-pointer has-[:checked]:border-gold has-[:checked]:bg-white">
               <input type="radio" name="pickup_round" value="morning" data-label="Morning round" checked class="accent-gold w-5 h-5" />
               <span>
                 <span class="font-extrabold text-forest block">Morning round</span>
-                <span class="text-sm text-gray-600">Pickup time <span data-setting="pickup_time_morning">06:00 - 06:30</span></span>
+                <span data-pickup-time class="text-sm text-gray-600">Pickup time <span data-setting="pickup_time_morning">06:00 - 06:30</span></span>
               </span>
             </label>
             <label class="flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-3 bg-cream cursor-pointer has-[:checked]:border-gold has-[:checked]:bg-white">
               <input type="radio" name="pickup_round" value="afternoon" data-label="Afternoon round" class="accent-gold w-5 h-5" />
               <span>
                 <span class="font-extrabold text-forest block">Afternoon round</span>
-                <span class="text-sm text-gray-600">Pickup time <span data-setting="pickup_time_afternoon">11:30 - 12:00</span></span>
+                <span data-pickup-time class="text-sm text-gray-600">Pickup time <span data-setting="pickup_time_afternoon">11:30 - 12:00</span></span>
               </span>
             </label>
           </div>
         </div>
-        <p class="text-xs text-gray-500 leading-relaxed">
+        <p id="pickup-notes" class="text-xs text-gray-500 leading-relaxed">
           * Pickup times may vary slightly depending on your pickup point. We will email you in advance if anything changes.<br>
           * Pickup and drop-off are free within 5 km of Chiang Mai city. An extra charge applies outside this area.
         </p>

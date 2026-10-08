@@ -327,6 +327,15 @@ const bookingModal = {
     // form.reset() และการเติมค่าจากบัญชีไม่ยิง event change จึงต้องปรับชื่อช่องไอดีเอง
     this.syncContactLabel();
 
+    // แพ็กเกจที่ไม่รวมรับ-ส่ง: ไม่ถามจุดรับ เหลือแค่ให้เลือกรอบที่จะมาถึง
+    const transfer = this.hasTransfer();
+    document.getElementById('pickup-fields').classList.toggle('hidden', !transfer);
+    document.getElementById('pickup-notes').classList.toggle('hidden', !transfer);
+    document.getElementById('no-transfer-note').classList.toggle('hidden', transfer);
+    document.getElementById('pickup-heading').textContent = transfer ? '🚐 Pickup point' : '🚐 Getting to the camp';
+    document.getElementById('round-heading').textContent = transfer ? 'Choose a pickup round *' : 'Choose your round *';
+    for (const element of document.querySelectorAll('[data-pickup-time]')) element.classList.toggle('hidden', !transfer);
+
     const online = this.onlinePayment();
     document.getElementById('payment-note-online').classList.toggle('hidden', !online);
     document.getElementById('payment-note-offline').classList.toggle('hidden', online);
@@ -341,6 +350,11 @@ const bookingModal = {
     document.getElementById('booking-form').classList.remove('hidden');
     document.getElementById('booking-modal-overlay').classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
+  },
+
+  /** false เมื่อแพ็กเกจที่เปิดอยู่ไม่รวมบริการรับ-ส่ง (ลูกค้าเดินทางมาเอง) */
+  hasTransfer() {
+    return this.activity?.includes_transfer !== false;
   },
 
   /** true เมื่อหลังบ้านเปิดรับชำระเงินออนไลน์ (PAYMENT_PROVIDER ไม่ใช่ none) */
@@ -502,11 +516,13 @@ const bookingModal = {
       `Adults ${adults}, Children ${children}, Infants ${infants}`;
     const date = document.getElementById('input-date').value;
     document.getElementById('summary-date').textContent = date ? formatDate(date, 'en-GB') : 'Not specified';
-    document.getElementById('summary-pickup').textContent =
-      (pickup?.dataset.label ?? 'Not specified') +
-      (form.elements.pickup_detail.value.trim() ? ` — ${form.elements.pickup_detail.value.trim()}` : '');
+    const transfer = this.hasTransfer();
+    document.getElementById('summary-pickup').textContent = transfer
+      ? (pickup?.dataset.label ?? 'Not specified') +
+        (form.elements.pickup_detail.value.trim() ? ` — ${form.elements.pickup_detail.value.trim()}` : '')
+      : 'Transfer not included — make your own way to the camp';
     const round = form.querySelector('input[name="pickup_round"]:checked');
-    const roundTime = this.settings[`pickup_time_${round?.value ?? 'morning'}`];
+    const roundTime = transfer ? this.settings[`pickup_time_${round?.value ?? 'morning'}`] : null;
     document.getElementById('summary-round').textContent =
       `${round?.dataset.label ?? 'Morning round'}${roundTime ? ` — pickup ${roundTime}` : ''}`;
     document.getElementById('summary-contact').textContent =
@@ -539,8 +555,11 @@ const bookingModal = {
       contact_app: form.elements.contact_app.value,
       contact_id: form.elements.contact_id.value.trim(),
       note: form.elements.note.value.trim() || undefined,
-      pickup_type: form.querySelector('input[name="pickup"]:checked')?.value ?? 'undecided',
-      pickup_detail: form.elements.pickup_detail.value.trim() || undefined,
+      // ไม่รวมรับ-ส่ง = ไม่มีจุดรับ ส่ง undecided ไปพร้อมหมายเหตุให้ทีมงานเห็นในหลังบ้าน
+      pickup_type: this.hasTransfer() ? (form.querySelector('input[name="pickup"]:checked')?.value ?? 'undecided') : 'undecided',
+      pickup_detail: this.hasTransfer()
+        ? form.elements.pickup_detail.value.trim() || undefined
+        : 'ไม่รวมรับ-ส่ง ลูกค้าเดินทางมาเอง',
       pickup_round: form.querySelector('input[name="pickup_round"]:checked')?.value ?? 'morning',
       accept_terms: true,
     };

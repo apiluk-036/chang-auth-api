@@ -64,6 +64,7 @@ export const activityBodySchema = z.object({
   daily_capacity: z.coerce.number().int().min(1).max(10_000).default(40),
   sort_order: z.coerce.number().int().min(0).default(0),
   is_active: z.coerce.boolean().default(true),
+  includes_transfer: z.coerce.boolean().default(true),
 });
 
 // ตอนแก้ไขต้องไม่เติมค่า default ให้ฟิลด์ที่ไม่ได้ส่งมา ไม่งั้นแก้ราคาอย่างเดียวจะรีเซ็ตโควตาไปด้วย

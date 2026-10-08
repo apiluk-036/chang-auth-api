@@ -23,6 +23,7 @@ erDiagram
         string   duration_label "เช่น 1.5 ชั่วโมง"
         string   duration_label_en "เช่น 1.5 hours (เว้นว่างได้)"
         int      duration_minutes
+        boolean  includes_transfer "false = ลูกค้าเดินทางมาเอง ฟอร์มจองไม่ถามจุดรับ"
         decimal  adult_price
         decimal  child_price
         decimal  infant_price

@@ -2,7 +2,7 @@
  * 6 เซ็ทกิจกรรม ตรงกับการ์ดใน activities.html และ index.html เดิม
  * ราคาผู้ใหญ่/เด็ก ยกมาจากค่าที่ frontend ส่งเข้า bookingModal.open() เดิม
  *
- * category: elephant = กิจกรรมกับช้าง, adventure = กิจกรรมผจญภัย, workshop = เวิร์กช็อป
+ * category: elephant = กิจกรรมกับช้าง, adventure = กิจกรรมผจญภัย, workshop = เวิร์กช็อป, package = แพ็กเกจรวมกิจกรรม
  */
 const activities = [
   {
@@ -125,6 +125,127 @@ const activities = [
     daily_capacity: 20,
     sort_order: 6,
   },
+  // ---------- แพ็กเกจรวมกิจกรรม — ราคาตามหน้า Trip.com ของปางช้าง (ต.ค. 2026) แก้ได้จากหน้าหลังบ้าน ----------
+  {
+    slug: 'half-day-elephant-care',
+    name: 'HALF-DAY ELEPHANT CARE',
+    name_th: 'ดูแลช้างครึ่งวัน (ไม่รวมรับ-ส่ง)',
+    description_th: 'ดูแลช้างครึ่งวันแบบครบ: ให้อาหารช้าง ทำวิตามินสมุนไพร และอาบน้ำช้างในลำธาร ปิดท้ายด้วยบุฟเฟ่ต์ แพ็กเกจนี้ไม่รวมรับ-ส่ง เดินทางมาปางช้างเอง',
+    description_en: 'A complete half day with the elephants: feed them, make herbal vitamin balls and bathe them in the stream, then enjoy a buffet meal. Transfer is not included, so make your own way to the camp.',
+    highlights: 'ให้อาหารช้างแบบใกล้ชิด\nทำวิตามินสมุนไพรและป้อนให้ช้าง\nอาบน้ำช้างในลำธาร\nบุฟเฟ่ต์อาหาร\nไม่รวมรับ-ส่ง เดินทางมาเอง',
+    highlights_en: 'Feed the elephants up close\nMake herbal vitamins and feed them by hand\nBathe the elephants in the stream\nBuffet meal included\nTransfer not included',
+    category: 'package',
+    duration_label: 'ครึ่งวัน',
+    duration_label_en: 'Half day',
+    duration_minutes: 240,
+    adult_price: 700,
+    child_price: 700,
+    infant_price: 0,
+    image_url: 'images/activities/pkg-half-day.jpg',
+    daily_capacity: 30,
+    sort_order: 7,
+    includes_transfer: false,
+  },
+  {
+    slug: 'half-day-elephant-care-transfer',
+    name: 'HALF-DAY ELEPHANT CARE + TRANSFER',
+    name_th: 'ดูแลช้างครึ่งวัน (รวมรับ-ส่ง)',
+    description_th: 'ดูแลช้างครึ่งวันพร้อมรถรับ-ส่งจากที่พักในตัวเมืองเชียงใหม่: ให้อาหารช้าง ทำวิตามินสมุนไพร อาบน้ำช้าง และบุฟเฟ่ต์',
+    description_en: 'Half-day elephant care with round-trip transfer from your accommodation in Chiang Mai city: feeding, vitamin making, elephant bathing and a buffet meal.',
+    highlights: 'รถรับ-ส่งไปกลับจากที่พักในตัวเมืองเชียงใหม่\nให้อาหารช้างแบบใกล้ชิด\nทำวิตามินสมุนไพรและป้อนให้ช้าง\nอาบน้ำช้างในลำธาร\nบุฟเฟ่ต์อาหาร',
+    highlights_en: 'Round-trip transfer from Chiang Mai city\nFeed the elephants up close\nMake herbal vitamins and feed them by hand\nBathe the elephants in the stream\nBuffet meal included',
+    category: 'package',
+    duration_label: 'ครึ่งวัน',
+    duration_label_en: 'Half day',
+    duration_minutes: 300,
+    adult_price: 1200,
+    child_price: 1200,
+    infant_price: 0,
+    image_url: 'images/activities/pkg-half-day-transfer.jpg',
+    daily_capacity: 30,
+    sort_order: 8,
+    includes_transfer: true,
+  },
+  {
+    slug: 'full-day-elephant-care',
+    name: 'FULL-DAY ELEPHANT CARE',
+    name_th: 'ดูแลช้างเต็มวัน (ไม่รวมรับ-ส่ง)',
+    description_th: 'ใช้เวลาทั้งวันกับช้าง: ให้อาหาร ทำวิตามินสมุนไพร อาบน้ำช้าง และเดินป่าไปกับฝูงช้าง พร้อมบุฟเฟ่ต์ แพ็กเกจนี้ไม่รวมรับ-ส่ง เดินทางมาปางช้างเอง',
+    description_en: 'Spend a full day with the elephants: feeding, vitamin making, bathing and a jungle trek alongside the herd, with a buffet meal. Transfer is not included, so make your own way to the camp.',
+    highlights: 'ให้อาหารช้างแบบใกล้ชิด\nทำวิตามินสมุนไพรและป้อนให้ช้าง\nอาบน้ำช้างในลำธาร\nเดินป่าไปกับฝูงช้าง\nบุฟเฟ่ต์อาหาร\nไม่รวมรับ-ส่ง เดินทางมาเอง',
+    highlights_en: 'Feed the elephants up close\nMake herbal vitamins and feed them by hand\nBathe the elephants in the stream\nJungle trek alongside the herd\nBuffet meal included\nTransfer not included',
+    category: 'package',
+    duration_label: 'เต็มวัน',
+    duration_label_en: 'Full day',
+    duration_minutes: 420,
+    adult_price: 1000,
+    child_price: 1000,
+    infant_price: 0,
+    image_url: 'images/activities/pkg-full-day.jpg',
+    daily_capacity: 25,
+    sort_order: 9,
+    includes_transfer: false,
+  },
+  {
+    slug: 'full-day-elephant-care-transfer',
+    name: 'FULL-DAY ELEPHANT CARE + TRANSFER',
+    name_th: 'ดูแลช้างเต็มวัน (พร้อมรับ-ส่ง)',
+    description_th: 'ดูแลช้างเต็มวันพร้อมรถรับ-ส่งจากที่พักในตัวเมืองเชียงใหม่: ให้อาหาร ทำวิตามินสมุนไพร อาบน้ำช้าง เดินป่ากับฝูงช้าง และบุฟเฟ่ต์',
+    description_en: 'Full-day elephant care with round-trip transfer from your accommodation in Chiang Mai city: feeding, vitamin making, bathing, a jungle trek and a buffet meal.',
+    highlights: 'รถรับ-ส่งไปกลับจากที่พักในตัวเมืองเชียงใหม่\nให้อาหารช้างแบบใกล้ชิด\nทำวิตามินสมุนไพรและป้อนให้ช้าง\nอาบน้ำช้างในลำธาร\nเดินป่าไปกับฝูงช้าง\nบุฟเฟ่ต์อาหาร',
+    highlights_en: 'Round-trip transfer from Chiang Mai city\nFeed the elephants up close\nMake herbal vitamins and feed them by hand\nBathe the elephants in the stream\nJungle trek alongside the herd\nBuffet meal included',
+    category: 'package',
+    duration_label: 'เต็มวัน',
+    duration_label_en: 'Full day',
+    duration_minutes: 480,
+    adult_price: 1800,
+    child_price: 1800,
+    infant_price: 0,
+    image_url: 'images/activities/pkg-full-day-transfer.jpg',
+    daily_capacity: 25,
+    sort_order: 10,
+    includes_transfer: true,
+  },
+  {
+    slug: 'feeding-rafting-zipline',
+    name: 'FEEDING + BAMBOO RAFTING + ZIPLINE',
+    name_th: 'ให้อาหารช้าง + ล่องแพไม้ไผ่ + โหนสลิง (พร้อมรับ-ส่ง)',
+    description_th: 'รวมสามกิจกรรมในวันเดียว: ให้อาหารช้าง ล่องแพไม้ไผ่ตามลำน้ำ และโหนสลิงชมป่าจากมุมสูง พร้อมรถรับ-ส่งจากที่พักในตัวเมืองเชียงใหม่',
+    description_en: 'Three activities in one day: feed the elephants, drift down the river on a bamboo raft and zipline above the forest canopy, with round-trip transfer from Chiang Mai city.',
+    highlights: 'รถรับ-ส่งไปกลับจากที่พักในตัวเมืองเชียงใหม่\nให้อาหารช้างแบบใกล้ชิด\nล่องแพไม้ไผ่ตามลำน้ำแม่แตง\nโหนสลิงพร้อมอุปกรณ์นิรภัยมาตรฐาน',
+    highlights_en: 'Round-trip transfer from Chiang Mai city\nFeed the elephants up close\nBamboo rafting on the Mae Taeng River\nZiplining with certified safety equipment',
+    category: 'package',
+    duration_label: 'เต็มวัน',
+    duration_label_en: 'Full day',
+    duration_minutes: 420,
+    adult_price: 1200,
+    child_price: 1200,
+    infant_price: 0,
+    image_url: 'images/activities/pkg-adventure.jpg',
+    daily_capacity: 20,
+    sort_order: 11,
+    includes_transfer: true,
+  },
+  {
+    slug: 'feeding-photo',
+    name: 'ELEPHANT FEEDING + PHOTO',
+    name_th: 'ให้อาหารช้าง + ถ่ายรูปกับช้าง (ไม่รวมรับ-ส่ง)',
+    description_th: 'ให้อาหารช้างแบบใกล้ชิด แล้วถ่ายรูปคู่กับช้างเป็นที่ระลึก ทีมงานช่วยจัดท่าและถ่ายรูปให้ แพ็กเกจนี้ไม่รวมรับ-ส่ง เดินทางมาปางช้างเอง',
+    description_en: 'Feed the elephants up close, then take keepsake photos with them. Our staff help you pose and take the pictures. Transfer is not included, so make your own way to the camp.',
+    highlights: 'ให้อาหารช้างแบบใกล้ชิด\nถ่ายรูปคู่กับช้าง\nทีมงานช่วยถ่ายรูปให้\nใช้เวลาสั้น เหมาะกับทริปที่เวลาจำกัด\nไม่รวมรับ-ส่ง เดินทางมาเอง',
+    highlights_en: 'Feed the elephants up close\nTake photos with the elephants\nStaff help take your pictures\nShort activity, ideal for a tight schedule\nTransfer not included',
+    category: 'elephant',
+    duration_label: '1 ชั่วโมง',
+    duration_label_en: '1 hour',
+    duration_minutes: 60,
+    adult_price: 300,
+    child_price: 300,
+    infant_price: 0,
+    image_url: 'images/activities/pkg-feeding-photo.jpg',
+    daily_capacity: 40,
+    sort_order: 12,
+    includes_transfer: false,
+  },
 ];
 
 export async function seed(knex) {
@@ -150,7 +271,7 @@ export async function seed(knex) {
     if (!existing.duration_label_en) patch.duration_label_en = activity.duration_label_en;
     if (!existing.highlights_en) patch.highlights_en = activity.highlights_en;
     // เปลี่ยนให้เฉพาะรูปเริ่มต้นของเวอร์ชันก่อน (SVG หรือ path .jpg ที่ไม่มีไฟล์จริง) รูปที่แอดมินตั้งเองไม่แตะ
-    if ([legacyImage, legacyImage.replace(/\.svg$/, '.jpg')].includes(existing.image_url)) {
+    if (legacyImage && [legacyImage, legacyImage.replace(/\.svg$/, '.jpg')].includes(existing.image_url)) {
       patch.image_url = activity.image_url;
     }
     if (Object.keys(patch).length > 0) {
